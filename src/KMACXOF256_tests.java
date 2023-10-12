@@ -46,7 +46,7 @@ public class KMACXOF256_tests {
         }
 
         exp = new byte[]{ // multi-byte example
-                (byte) 0b0100_0000, (byte) 0b1001_0000, (byte) 0b1001_0000
+                (byte) 0b0100_0000, (byte) 0b1001_0000, (byte) 0b1111_1010
         };
         res = KMACXOF256.left_encode(0x095F);
         for(int i=0; i < res.length; i++) {

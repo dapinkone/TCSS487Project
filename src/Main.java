@@ -211,8 +211,8 @@ class Main {
     }*/
     // main
     public static void main(String args[]) {
-//        if (test_sha3() == 0 && test_shake() == 0)
-//            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
+        if (test_sha3() == 0 && test_shake() == 0)
+            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
         ///test_speed();
 
         //return 0;
