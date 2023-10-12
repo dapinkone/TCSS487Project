@@ -25,7 +25,11 @@ public class Sha3 {
     //#ifndef ROTL64
 //#define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
     static long ROTL64(long x, long y) {
-        return (((x) << (y)) | ((x) >>> (64 - (y))));
+        var u = (((x) << (y)) | ((x) >>> (64 - (y))));
+        if(64 - y < 0) {
+            throw new RuntimeException("y out of valid range for uint");
+        }
+        return u;
     }
 //            #endif
 

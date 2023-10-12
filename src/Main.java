@@ -6,10 +6,8 @@
         // include <time.h>
         // include "sha3.h"
 
-import java.util.Arrays;
-
 // read a hex string, return byte length or -1 on error.
-class main {
+class Main {
     static int test_hexdigit(char ch) {
         if (ch >= '0' && ch <= '9')
             return ch - '0';
@@ -213,11 +211,17 @@ class main {
     }*/
     // main
     public static void main(String args[]) {
-        if (test_sha3() == 0 && test_shake() == 0)
-            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
+//        if (test_sha3() == 0 && test_shake() == 0)
+//            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
         ///test_speed();
 
         //return 0;
+        //System.out.println(KMACXOF256.tstenc8());
+        System.out.println("testenc:\n");
+        System.out.println(KMACXOF256_tests.tstenc8());
+        System.out.println("test_left_encode:");
+        System.out.println(KMACXOF256_tests.test_left_encode());
+
     }
 
 }
