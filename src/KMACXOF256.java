@@ -28,7 +28,6 @@ public class KMACXOF256 {
         int n = 1;
         //while((1 << 8*n) > x) {
         while(Math.pow(2, 8*n) < x) {
-            System.out.println("???");
             n++;
         }
         System.out.printf("To store %d req's %d bytes.\n", x, n);
