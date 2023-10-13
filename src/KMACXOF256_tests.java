@@ -3,13 +3,20 @@ import java.util.Arrays;
 public class KMACXOF256_tests {
     public static String getBits(byte b) {
         StringBuilder sb = new StringBuilder();
-        for(int i=7; i >= 0; i--) {
-            if((b & (1 << i)) != 0) {
-                sb.append("1");
-            } else {
-                sb.append("0");
-            }
-        }
+        for(int i=7; i >= 0; i--)
+            sb.append(((b & (1 << i)) != 0) ?"1" : "0");
+        return sb.toString();
+    }
+    public static String getBits(int b) {
+        StringBuilder sb = new StringBuilder();
+        for(int i=15; i >= 0; i--)
+            sb.append(((b & (1 << i)) != 0) ?"1" : "0");
+        return sb.toString();
+    }
+    public static String getBits(long b) {
+        StringBuilder sb = new StringBuilder();
+        for(int i=63; i >= 0; i--)
+            sb.append(((b & (1L << i)) != 0) ?"1" : "0");
         return sb.toString();
     }
     public static boolean tstenc8() {

@@ -54,10 +54,11 @@ public class Sha3 {
             // to simulate underlying mechanics of union sharing the st memory space.
         }
         public long[] byWord() { // ctx.st.q is supposed to be uint64_t
+            // returns ctx.b as an array of longs/words
             long[] words = new long[b.length/8];
             for(int word=0; word < words.length; word++) {
                 for(int i=0; i < 8; i++) { // storing 8 bytes into the long
-                    words[word] |= ((long) b[word * 8 + i] << (7-i)*8);
+                    words[word] |= (b[word * 8 + i] & 0xFFL) << (7-i)*8;
                 }
             }
             return words;
@@ -68,9 +69,15 @@ public class Sha3 {
                 long word = words[w];
                 // extract each byte from the given word
                 for(int i=0; i < 8; i++) { // extract 8 bytes from the long
-                    b[w*8 + i] = (byte) ((word >>> (7-i)*8));
+                    b[w*8 + i] = (byte) (((word >>> (7-i)*8)) & 0xFF);
                 }
             }
+        }
+        public void setBytes(byte[] bytes) {
+            if(this.b.length < bytes.length) {
+                this.b = new byte[bytes.length];
+            }
+            System.arraycopy(bytes, 0, this.b, 0, bytes.length);
         }
     }
     // Compression function.
@@ -136,7 +143,7 @@ public class Sha3 {
         int i, j, r;
         long t;
         var bc = new long[5];
-        //System.out.println(ByteOrder.nativeOrder()); little_endian is most common.
+        //System.out.println(ByteOrder.nativeOrder()); //little_endian is most common.
 //#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__ // Believe java handles this implicitly.
 //        uint8_t * v;
 //
@@ -148,7 +155,6 @@ public class Sha3 {
 //                    (((uint64_t) v[4]) << 32) | (((uint64_t) v[5]) << 40) |
 //                    (((uint64_t) v[6]) << 48) | (((uint64_t) v[7]) << 56);
 //        }
-//#endif
 
         // actual iteration
         for (r = 0; r < KECCAKF_ROUNDS; r++) {
