@@ -20,7 +20,7 @@ public class Sha3_tests {
             }
         }
         // test byWord()
-        Sha3.shake128_init(ctx);
+
         var rcvd = ctx.byWord();
         for(int i=0; i < words.length; i++) {
             if(words[i] != rcvd[i]) {

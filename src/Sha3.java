@@ -119,6 +119,8 @@ public class Sha3 {
 
         // NOTE: copying may not be performant. Possible refactor/optimization?
         long[] st = c.byWord();
+        for(int i=0; i < 25; i++)
+            st[i] = Long.reverseBytes(st[i]);
         // constants
     long keccakf_rndc[] = {
             0x0000000000000001L, 0x0000000000008082L, 0x800000000000808aL,
@@ -209,6 +211,9 @@ public class Sha3 {
 //            v[7] = (t >> 56) & 0xFF;
 //        }
 //#endif
+        for(i=0; i < 25; i++) {
+            st[i] = Long.reverseBytes(st[i]);
+        }
         c.setWord(st);
     }
 
@@ -220,6 +225,7 @@ public class Sha3 {
 //        for (i = 0; i < 25; i++) {
 //            c.q[i] = 0;
 //        }
+        c.setWord(new long[25]);
         c.mdlen = mdlen;
         c.rsiz = 200 - 2 * mdlen;
         c.pt = 0;
@@ -266,11 +272,22 @@ public class Sha3 {
 
     public static void sha3(byte[] in, long inlen, byte[] md, int mdlen) {
         sha3_ctx_t sha3ctx = new sha3_ctx_t();
+        System.out.printf("%d %d ", inlen, mdlen);
 
         sha3_init( sha3ctx, mdlen);
-        sha3_update( sha3ctx, in, inlen);
-        sha3_final(md, sha3ctx);
+        System.out.printf("init:");
+        for(int i=0; i < inlen; i++) System.out.printf("%02X", in[i]);
+        System.out.println("\n");
 
+        sha3_update( sha3ctx, in, inlen);
+        System.out.printf("update:");
+        for(int i=0; i < sha3ctx.b.length; i++) System.out.printf("%02X", sha3ctx.b[i]);
+        System.out.println("\n");
+
+        sha3_final(md, sha3ctx);
+        System.out.printf("final:");
+        for(int i=0; i < sha3ctx.b.length; i++) System.out.printf("%02X", sha3ctx.b[i]);
+        System.out.println("\n");
         //return md;
     }
 

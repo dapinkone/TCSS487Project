@@ -17,25 +17,22 @@ class Main {
             return ch - 'a' + 10;
         return -1;
     }
-
     static int test_readhex(byte[] buf, String str, int maxbytes) {
         int i, h, l;
-        System.out.printf("%d : %d\n", str.length(), maxbytes);
-        for (i = 0; i < maxbytes; i++) {
-
-            h = 2*i < str.length() ? test_hexdigit( str.charAt(2 * i)) : -1;
+        for (i = 0; i < str.length()/2; i++) {
+            h = test_hexdigit(str.charAt(2 * i));
             if (h < 0)
                 return i;
-            l = 2*i+1 < str.length() ? test_hexdigit( str.charAt(2 * i + 1)) : -1;
+            l = test_hexdigit(str.charAt(2 * i + 1));
             if (l < 0)
                 return i;
             buf[i] = (byte) ((h << 4) + l);
         }
-
         return i;
     }
 
     static int memcmp(byte[] sha, byte[] buf, int sha_len) {
+        // TODO: Arrays.compare(sha, 0, sha_len, buf,0, sha_len) ?
         // checking if the first sha_len bytes of sha and buf are equal:
          var eq = true;
         for(int j=0; j < sha_len; j++) {
@@ -91,7 +88,7 @@ class Main {
         var msg = new byte[256];
 
         fails = 0;
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < 4; i++) { // max 4
 //            memset(sha, 0, sizeof(sha)); // arrays auto-initialized to 0 in java.
 //            memset(buf, 0, sizeof(buf));
 //            memset(msg, 0, sizeof(msg));
@@ -100,7 +97,6 @@ class Main {
 //            sha_len = test_readhex(sha, testvec[i][1], sizeof(sha)); // sizeof == .length?
             msg_len = test_readhex(msg, testvec[i][0], msg.length);
             sha_len = test_readhex(sha, testvec[i][1], sha.length);
-
             Sha3.sha3(msg, msg_len, buf, sha_len);
 
             // checking if the first sha_len bytes of sha and buf are equal:
@@ -108,14 +104,12 @@ class Main {
                 //fprintf(stderr, "[%d] SHA3-%d, len %d test FAILED.\n",
                 System.out.printf(/*stderr, */"[%d] SHA3-%d, len %d test FAILED.\n",
                         i, sha_len * 8, msg_len);
-                System.out.print("Got: ");
-                for(var b : buf)
-                    System.out.printf("%02X", b);
-                System.out.print("\nexp: ");
                 for(var b : sha)
                     System.out.printf("%02X", b);
                 System.out.println();
                 fails++;
+            } else {
+                System.out.print("+\n");
             }
         }
 
@@ -143,7 +137,7 @@ class Main {
         int i, j, fails;
 //        sha3_ctx_t sha3;
 //        uint8_t buf[ 32], ref[32];
-        Sha3.sha3_ctx_t sha3 = null;
+        Sha3.sha3_ctx_t sha3 = new Sha3.sha3_ctx_t();
         byte[] buf = new byte[32];
         byte[] ref = new byte[32];
 
@@ -213,14 +207,15 @@ class Main {
     public static void main(String args[]) {
         if (test_sha3() == 0 && test_shake() == 0)
             System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
-        ///test_speed();
+        //test_speed();
 
         //return 0;
-        //System.out.println(KMACXOF256.tstenc8());
-        System.out.println("testenc:\n");
+
+        System.out.println("testenc:");
         System.out.println(KMACXOF256_tests.tstenc8());
         System.out.println("test_left_encode:");
         System.out.println(KMACXOF256_tests.test_left_encode());
+        System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
 
     }
 
