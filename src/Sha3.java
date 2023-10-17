@@ -10,7 +10,7 @@ import java.nio.ByteOrder;
 // uint64_t => long
 public class Sha3 {
     // TODO: these are all static methods. sha_ctx could be tied to the sha3 object, and save on arguments & complexity.
-//
+
 //#ifndef SHA3_H
 //#define SHA3_H
 //
@@ -20,6 +20,7 @@ public class Sha3 {
     //#ifndef KECCAKF_ROUNDS
 //#define KECCAKF_ROUNDS 24
     public static int KECCAKF_ROUNDS = 24;
+    public static final long BYTE_MASK = 0xFF;
 //            #endif
 
     //#ifndef ROTL64
@@ -42,6 +43,9 @@ public class Sha3 {
 //        int pt, rsiz, mdlen;                    // these don't overflow
 //    } sha3_ctx_t;
 //
+    /**
+     * This static class is implemented to behave as a union sharing the same st memory space.
+     */
     static class sha3_ctx_t {
         public byte[] b;
         //public long[] q;
@@ -53,6 +57,11 @@ public class Sha3 {
             //this.q = new long[25]; // uint64_t, removed in favor of byWord() / setWord()
             // to simulate underlying mechanics of union sharing the st memory space.
         }
+
+        /**
+         * 
+         * @return an array of longs/words form of ctx.b
+         */
         public long[] byWord() { // ctx.st.q is supposed to be uint64_t
             // returns ctx.b as an array of longs/words
             long[] words = new long[b.length/8];
@@ -119,6 +128,7 @@ public class Sha3 {
 
         // NOTE: copying may not be performant. Possible refactor/optimization?
         long[] st = c.byWord();
+
         for(int i=0; i < 25; i++)
             st[i] = Long.reverseBytes(st[i]);
         // constants
@@ -142,10 +152,11 @@ public class Sha3 {
         } ;
 
         // variables
-        int i, j, r;
+        int j, r;
         long t;
         var bc = new long[5];
         //System.out.println(ByteOrder.nativeOrder()); //little_endian is most common.
+
 //#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__ // Believe java handles this implicitly.
 //        uint8_t * v;
 //
@@ -157,16 +168,37 @@ public class Sha3 {
 //                    (((uint64_t) v[4]) << 32) | (((uint64_t) v[5]) << 40) |
 //                    (((uint64_t) v[6]) << 48) | (((uint64_t) v[7]) << 56);
 //        }
+        //TODO: convert the following into a Java equivalent version.
+        for (int i = 0; i < st.length; i++) {
+            st[i] = i;
+        }
+
+        for (int i = 0; i < 25; i++) {
+            long v = st[i];
+            // Extract each byte from the 64-bit word
+            long v0 = v & BYTE_MASK;
+            long v1 = (v >> 8) & BYTE_MASK;
+            long v2 = (v >> 16) & BYTE_MASK;
+            long v3 = (v >> 24) & BYTE_MASK;
+            long v4 = (v >> 32) & BYTE_MASK;
+            long v5 = (v >> 40) & BYTE_MASK;
+            long v6 = (v >> 48) & BYTE_MASK;
+            long v7 = (v >> 56) & BYTE_MASK;
+
+            // Reconstruct the 64-bit word
+            st[i] = v0 | (v1 << 8) | (v2 << 16) | (v3 << 24) | (v4 << 32) |
+                    (v5 << 40) | (v6 << 48) | (v7 << 56);
+        }
 
         // actual iteration
         for (r = 0; r < KECCAKF_ROUNDS; r++) {
 
             // Theta
-            for (i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++) {
                 bc[i] = st[i] ^ st[i + 5] ^ st[i + 10] ^ st[i + 15] ^ st[i + 20];
             }
 
-            for (i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++) {
                 t = bc[(i + 4) % 5] ^ ROTL64(bc[(i + 1) % 5], 1);
                 for (j = 0; j < 25; j += 5) {
                     st[j + i] ^= t;
@@ -175,7 +207,7 @@ public class Sha3 {
 
             // Rho Pi
             t = st[1];
-            for (i = 0; i < 24; i++) {
+            for (int i = 0; i < 24; i++) {
                 j = keccakf_piln[i];
                 bc[0] = st[j];
                 st[j] = ROTL64(t, keccakf_rotc[i]);
@@ -184,10 +216,10 @@ public class Sha3 {
 
             //  Chi
             for (j = 0; j < 25; j += 5) {
-                for (i = 0; i < 5; i++) {
+                for (int i = 0; i < 5; i++) {
                     bc[i] = st[j + i];
                 }
-                for (i = 0; i < 5; i++) {
+                for (int i = 0; i < 5; i++) {
                     st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
                 }
             }
@@ -211,7 +243,7 @@ public class Sha3 {
 //            v[7] = (t >> 56) & 0xFF;
 //        }
 //#endif
-        for(i=0; i < 25; i++) {
+        for(int i=0; i < 25; i++) {
             st[i] = Long.reverseBytes(st[i]);
         }
         c.setWord(st);
@@ -300,12 +332,10 @@ public class Sha3 {
         c.pt = 0;
     }
 
-    static void shake_out(sha3_ctx_t c, byte[] out, long len) {
-        int i;
-        int j;
+    static void shake_out(sha3_ctx_t c, byte[] out, long len) {        
 
-        j = c.pt;
-        for (i = 0; i < len; i++) {
+        int j = c.pt;
+        for (int i = 0; i < len; i++) {
             if (j >= c.rsiz) {
                 sha3_keccakf(c);
                 j = 0;

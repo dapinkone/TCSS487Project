@@ -69,6 +69,12 @@ public class KMACXOF256 {
         //then the length of the output of encode_string(S) will also be a multiple of 8
         return appendBytes(left_encode(S.length*8), S);
     }
+    /**
+     * Applied the NIST bytepad primitive to a byte array X with encoding factor w.
+     * @param X byte array to bytepad
+     * @param w encoding factor (the output length must be a multiple of w)
+     * @return byte-padded byte array X with encoding factor w.
+     */
     public byte[] bytepad(byte[] /* bitstring? */ X, int w) {
         // The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
         //the result with zeros until it is a byte string whose length in bytes is a multiple of w. In general,
@@ -76,10 +82,22 @@ public class KMACXOF256 {
         //can be parsed unambiguously from its beginning, whereas bytepad does not provide
         //unambiguous padding for all input strings.
         // data returned is a byte string of form [ left_encode(w) || X || 0*n ]
-        var z = appendBytes(left_encode(w), X); // TODO: conversion of X to byte[] from bitstring
-        while(z.length % w != 0) {
-            z = appendBytes(z, new byte[]{ 0 });
+        assert w > 0;
+        // 1. z = left_encode(w) || X
+        byte[] encodedW = left_encode(w);
+        byte[] z = new byte[w * ((encodedW.length + X.length + w -1) / w)];
+        // NB: 
+        System.arraycopy(encodedW, 0, z, 0, encodedW.length);
+        System.arraycopy(X, 0, z, encodedW.length, X.length);
+        // 2. (nothing to do in software: Len(z) mod 8 = 0 in this byte-oriented implementation)
+        // 3. while  (len(z) / 8) mod w != 0: z = z || 00000000
+        for (int i = encodedW.length + X.length; i < z.length; i++) {
+            z[i] = (byte)0;
         }
+        // var z = appendBytes(left_encode(w), X); // TODO: conversion of X to byte[] from bitstring
+        // while(z.length % w != 0) {
+        //     z = appendBytes(z, new byte[]{ 0 });
+        // }
         return z;
     }
     public byte[] substring(byte[] /* bitstring? */ X, int a, int b) {
