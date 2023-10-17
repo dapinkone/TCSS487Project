@@ -59,4 +59,19 @@ public class KMACXOF256_tests {
 
         return true;
     }
+
+    /**
+     * Testing if the information in bytes are encoded in unsigned number.
+     * @return
+     */
+    public static boolean test_right_encode() {
+        var exp = new byte[] {
+            (byte) 0b1000_0000, 0 
+        };
+
+        var res = KMACXOF256.right_encode(0);
+        // test case= right_encode (0) = (0b0000_1000)
+        // test case= right_encode (10) = (0b000_)
+        return true;
+    }
 }
