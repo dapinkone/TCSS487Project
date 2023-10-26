@@ -70,23 +70,23 @@ public class KMACXOF256 {
         }
         return z;
     }
-    public byte[] substring(byte[] /* bitstring? */ X, int a, int b) {
-        // returns a substring from the bitstring X containing values [a, b-1] inclusive.
-        // FIXME: assumes a and b are multiples of 8, and X is a byte string.
-        // Specifically this function is supposed to work with BIT strings.
-        a = a/8;
-        b = b/8;
-
-        if(a >= b || a >= X.length) {
-            return new byte[]{};
-        }
-        if(b <= X.length) {
-            var R = new byte[b-1 - a]; // new bitstring
-            System.arraycopy(X, a, R, 0, R.length);
-            return R;
-        }
-        return Arrays.copyOfRange(X, a, X.length-1);
-    }
+//    public byte[] substring(byte[] /* bitstring? */ X, int a, int b) {
+//        // returns a substring from the bitstring X containing values [a, b-1] inclusive.
+//        // FIXME: assumes a and b are multiples of 8, and X is a byte string.
+//        // Specifically this function is supposed to work with BIT strings.
+//        a = a/8;
+//        b = b/8;
+//
+//        if(a >= b || a >= X.length) {
+//            return new byte[]{};
+//        }
+//        if(b <= X.length) {
+//            var R = new byte[b-1 - a]; // new bitstring
+//            System.arraycopy(X, a, R, 0, R.length);
+//            return R;
+//        }
+//        return Arrays.copyOfRange(X, a, X.length-1);
+//    }
     public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
         /*
          - X is the main input bit string. It may be of any length3, including zero.
