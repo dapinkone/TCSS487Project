@@ -1,19 +1,7 @@
-import jdk.jshell.spi.ExecutionControl;
-
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class KMACXOF256 {
     // basic operations & functions from FIPS 202
-    public static byte enc8(byte b) {
-        // return (byte) (Integer.reverse(b & 0xFF) >>> 24);
-        int result = 0;
-        for(int i = 0; i < 8; i++) {
-            result = ((result << 1) | b & 1);
-            b >>>= 1;
-        }
-        return (byte) result;
-    }
     public static long trunc(int s, long X) {
         // trancates some bitstring X, returning the first s bits.
         return 0L;
@@ -49,8 +37,8 @@ public class KMACXOF256 {
         }
 
         var ret = new byte[n+1];
-        ret[0] = enc8((byte) n); // left encode, so we encode the size on the left.
-        for(int i=0; i < n; i++) ret[i+1] = enc8(b[i]);
+        ret[0] = ((byte) n); // left encode, so we encode the size on the left.
+        System.arraycopy(b, 0, ret, 1, n);
         return ret;
     }
     public byte[] appendBytes(byte[] A, byte[] B) {

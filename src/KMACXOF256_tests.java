@@ -19,19 +19,6 @@ public class KMACXOF256_tests {
             sb.append(((b & (1L << i)) != 0) ?"1" : "0");
         return sb.toString();
     }
-    public static boolean tstenc8() {
-        byte b = 0b0000_1001;
-        byte expected = (byte) 0b1001_0000;
-        if (KMACXOF256.enc8(b) != expected) return false;
-        if (KMACXOF256.enc8((byte) 0b0000_0001) != (byte) 0b1000_0000) return false;
-        if (KMACXOF256.enc8((byte) 0b1110_0000) != (byte) 0b0000_00111) {
-            System.out.println(0b1110_0000);
-            System.out.println(getBits((byte) 0b1110_0000));
-            return false;
-        }
-
-        return true;
-    }
 
     public static boolean test_left_encode() { // FIXME: left encode broken?
         var exp = new byte[]{

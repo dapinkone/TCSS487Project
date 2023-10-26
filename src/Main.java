@@ -211,8 +211,6 @@ class Main {
 
         //return 0;
 
-        System.out.println("testenc:");
-        System.out.println(KMACXOF256_tests.tstenc8());
         System.out.println("test_left_encode:");
         System.out.println(KMACXOF256_tests.test_left_encode());
         System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());

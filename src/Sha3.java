@@ -3,27 +3,15 @@
 // C reference implementation here: https://github.com/mjosaarinen/tiny_sha3/
 // Referenced 2023-10-03.
 
-import java.nio.ByteOrder;
-
 // translation notes:
 // uint8_t  => byte
 // uint64_t => long
+// Common issue is sign bit extension when
+// implicit or explicit casting to larger types, such as byte->int.
+// requires a mask of & 0xFF to truncate.
 public class Sha3 {
     // TODO: these are all static methods. sha_ctx could be tied to the sha3 object, and save on arguments & complexity.
-//
-//#ifndef SHA3_H
-//#define SHA3_H
-//
-//#include <stddef.h>
-//#include <stdint.h>
-
-    //#ifndef KECCAKF_ROUNDS
-//#define KECCAKF_ROUNDS 24
     public static int KECCAKF_ROUNDS = 24;
-//            #endif
-
-    //#ifndef ROTL64
-//#define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
     static long ROTL64(long x, long y) {
         var u = (((x) << (y)) | ((x) >>> (64 - (y))));
         if(64 - y < 0) {
@@ -31,8 +19,6 @@ public class Sha3 {
         }
         return u;
     }
-//            #endif
-
     // state context
 //    typedef struct {
 //        union {                                 // state:
@@ -220,16 +206,10 @@ public class Sha3 {
 // Initialize the context for SHA3
 
     static int sha3_init(sha3_ctx_t c, int mdlen) {
-//        int i; // arrays  are zero-initialized by default in java.
-//
-//        for (i = 0; i < 25; i++) {
-//            c.q[i] = 0;
-//        }
         c.setWord(new long[25]);
         c.mdlen = mdlen;
         c.rsiz = 200 - 2 * mdlen;
         c.pt = 0;
-
         return 1; // TODO: redesign/refactor. would be better to return the sha3_ctx_t?
     }
 
