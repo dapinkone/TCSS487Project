@@ -214,7 +214,27 @@ class Main {
         System.out.println("test_left_encode:");
         System.out.println(KMACXOF256_tests.test_left_encode());
         System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
+        // Collect plaintext bytes from whatever source necessary.
 
+
+//Computing a cryptographic hash h of a byte array m:
+//▪ h <- KMACXOF256(“”, m, 512, “D”)
+
+//• Compute an authentication tag t of a byte array m under passphrase pw:
+//▪ t <- KMACXOF256(pw, m, 512, “T”)
+
+//• Encrypting a byte array m symmetrically under passphrase pw:
+//▪ z <- Random(512)
+//▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
+//▪ c <- KMACXOF256(ke, “”, |m|, “SKE”)  m
+//▪ t <- KMACXOF256(ka, m, 512, “SKA”)
+//▪ symmetric cryptogram: (z, c, t)
+
+//• Decrypting a symmetric cryptogram (z, c, t) under passphrase pw:
+//▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
+//▪ m  KMACXOF256(ke, “”, |c|, “SKE”)  c
+//▪ t’  KMACXOF256(ka, m, 512, “SKA”)
+//▪ accept if, and only if, t’ = t
     }
 
 }
