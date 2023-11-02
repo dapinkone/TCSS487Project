@@ -206,7 +206,7 @@ public class Sha3 {
 
 // Initialize the context for SHA3
 
-    static int sha3_init(sha3_ctx_t c, int mdlen) {
+    static void sha3_init(sha3_ctx_t c, int mdlen) {
 //        int i; // arrays  are zero-initialized by default in java.
 //
 //        for (i = 0; i < 25; i++) {
@@ -216,8 +216,6 @@ public class Sha3 {
         c.mdlen = mdlen;
         c.rsiz = 200 - 2 * mdlen;
         c.pt = 0;
-
-        return 1; // TODO: redesign/refactor. would be better to return the sha3_ctx_t?
     }
 
 // update state with more data

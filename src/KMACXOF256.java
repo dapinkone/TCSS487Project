@@ -133,6 +133,12 @@ public class KMACXOF256 {
         if(L % 8 != 0) throw new IllegalArgumentException("Only whole bytes are supported.");
         if(L == 0) return new byte[0];
 
+        byte[] encodedN = encode_string(N);
+        byte[] encodedS = encode_string(S);
+        byte[] bytePadded = bytepad(appendBytes(encodedN, encodedS), mode == 128 ? 168 : 136);
+        byte[] newX = appendBytes(bytePadded, X);
+        newX = appendBytes(newX, new byte[]{0});
+
         if(N.length == 0 && S.length == 0) {
             if (mode == 128) {
                 var ctx = new Sha3.sha3_ctx_t();
