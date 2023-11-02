@@ -114,7 +114,6 @@ public class Sha3 {
     }
 
 //    define shake_update sha3_update
-
 //    void shake_xof(sha3_ctx_t *c);
 //
 //    void shake_out(sha3_ctx_t *c, void *out, size_t len);
@@ -129,6 +128,7 @@ public class Sha3 {
         // NOTE: copying may not be performant. Possible refactor/optimization?
         long[] st = c.byWord();
 
+        // convert from little-endian to big endian if necessary
         for(int i=0; i < 25; i++)
             st[i] = Long.reverseBytes(st[i]);
         // constants
@@ -156,39 +156,6 @@ public class Sha3 {
         long t;
         var bc = new long[5];
         //System.out.println(ByteOrder.nativeOrder()); //little_endian is most common.
-
-//#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__ // Believe java handles this implicitly.
-//        uint8_t * v;
-//
-//        // endianess conversion. this is redundant on little-endian targets
-//        for (i = 0; i < 25; i++) {
-//            v = (uint8_t *) & st[i];
-//            st[i] = ((uint64_t) v[0]) | (((uint64_t) v[1]) << 8) |
-//                    (((uint64_t) v[2]) << 16) | (((uint64_t) v[3]) << 24) |
-//                    (((uint64_t) v[4]) << 32) | (((uint64_t) v[5]) << 40) |
-//                    (((uint64_t) v[6]) << 48) | (((uint64_t) v[7]) << 56);
-//        }
-        //TODO: convert the following into a Java equivalent version.
-        for (int i = 0; i < st.length; i++) {
-            st[i] = i;
-        }
-
-        for (int i = 0; i < 25; i++) {
-            long v = st[i];
-            // Extract each byte from the 64-bit word
-            long v0 = v & BYTE_MASK;
-            long v1 = (v >> 8) & BYTE_MASK;
-            long v2 = (v >> 16) & BYTE_MASK;
-            long v3 = (v >> 24) & BYTE_MASK;
-            long v4 = (v >> 32) & BYTE_MASK;
-            long v5 = (v >> 40) & BYTE_MASK;
-            long v6 = (v >> 48) & BYTE_MASK;
-            long v7 = (v >> 56) & BYTE_MASK;
-
-            // Reconstruct the 64-bit word
-            st[i] = v0 | (v1 << 8) | (v2 << 16) | (v3 << 24) | (v4 << 32) |
-                    (v5 << 40) | (v6 << 48) | (v7 << 56);
-        }
 
         // actual iteration
         for (r = 0; r < KECCAKF_ROUNDS; r++) {
