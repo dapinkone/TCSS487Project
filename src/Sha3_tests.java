@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 public class Sha3_tests {
     public static boolean words_test() {
         var ctx = new Sha3.sha3_ctx_t();
@@ -13,6 +15,7 @@ public class Sha3_tests {
                 (byte) 0xAB, (byte) 0xCD, (byte) 0xEF, (byte) 0xAB,
                 (byte) 0xCD, (byte) 0xEF, (byte) 0x12, (byte) 0x34
         };
+
         for(int i=0; i < expected.length; i++) {
             if(expected[i] != ctx.b[i]) {
                 System.out.println("failed setWord()");
@@ -29,7 +32,7 @@ public class Sha3_tests {
             }
         }
         /////
-        Sha3.shake128_init(ctx);
+        Sha3.shake256_init(ctx);
         var data = new byte[] { // two words/longs worth of bytes.
                 0x0, 1, 2, 3, 4, 5, 6, 7,
                 0x0, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70

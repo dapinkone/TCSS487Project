@@ -1,4 +1,4 @@
-import java.util.Arrays;
+import static java.lang.Math.min;
 
 public class KMACXOF256 {
     // basic operations & functions from FIPS 202
@@ -6,48 +6,57 @@ public class KMACXOF256 {
         // trancates some bitstring X, returning the first s bits.
         return 0L;
     }
-    public static byte[] newBitString(int s) { // O_s defined in sec 2.3;
-        if(s == 0) return new byte[0];
-        return new byte[s/8]; // Caveat: if s is not divisible by 8, what do?
+    public static byte[] xor(byte[] X, byte[] Y) {
+        // X xor Y for strings of arbitrary but equal bit length.
+        for(int i=0; i < min(X.length, Y.length); i++) X[i] ^= Y[i];
+        return X;
     }
 
-    public static byte[] bitstringXor(byte[] X, byte[] Y) {
-        // X xor Y for strings of arbitrary but equal bit length.
-        byte[] R = new byte[X.length];
-        for(int i=0; i< R.length; i++) R[i] = (byte) (X[i] ^ Y[i]);
-        return R;
-    }
     // log_2(x)
     // min(x, y)
     // required methods / specialized functions
-    public static byte[] left_encode(int x) {
+    public static byte[] left_encode(long x) {
         // FIXME: left_encode should take all x such that 0 <= x < 2**2040
         // find n, the number of bytes required to encode x:
-        int n = 1;
-        //while((1 << 8*n) > x) {
-        while(Math.pow(2, 8*n) < x) {
+        int n = 0;
+        if(x == 0) return new byte[]{1, 0}; // edge case.
+
+        long y = x; // copy x, and count the # of bytes.
+        while(y != 0) {
             n++;
+            y >>>= 8;
         }
-        System.out.printf("To store %d req's %d bytes.\n", x, n);
-        // need bytes of x:
+       // extract n bytes of x:
         var b = new byte[n];
-        for(int i=0; i < n; i++) { // extract n bytes from the int
-            b[n-i-1] = (byte) (x & 0xFF);
+        for (int i = 0; i < n; i++) {
+            b[n - i - 1] = (byte) (x & 0xFF);
             x >>>= 8; // shift right by one byte.
         }
+        return appendBytes(new byte[]{(byte) n}, b);
+    }
 
-        var ret = new byte[n+1];
-        ret[0] = ((byte) n); // left encode, so we encode the size on the left.
-        System.arraycopy(b, 0, ret, 1, n);
-        return ret;
+    /**
+     * appends any number of byte arrays into a whole,
+     * seen as .... || .... || ... || .... in the spec.
+     * @param Xs given arguments of any number of byte arrays
+     * @return all arguments appended together.
+     */
+    public static byte[] appendBytes(byte[]... Xs) {
+        // count up the lengths to determine how long the new array is.
+        int newlen = 0;
+        for (var x : Xs) newlen += x.length;
+
+        byte[] newXs = new byte[newlen];
+        int ptr = 0; // keep track of where we are in newXs while copying.
+        for (byte[] x : Xs) {
+            // copy each array from Xs into newXs.
+            System.arraycopy(x, 0, newXs, ptr, x.length);
+            ptr += x.length;
+        }
+        return newXs;
     }
-    public byte[] appendBytes(byte[] A, byte[] B) {
-        var ret = new byte[A.length + B.length];
-        System.arraycopy(A, 0, ret, 0, A.length);
-        System.arraycopy(B, 0, ret, A.length, B.length);
-        return ret;
-    }
-    public byte[] encode_string(byte[] S) {
+
+    static public byte[] encode_string(byte[] S) {
 //        The encode_string function is used to encode bit strings in a way that may be parsed
 //        unambiguously from the beginning of the string, S. The function is defined as follows:
         // Return left_encode(len(S)) || S.
@@ -55,38 +64,47 @@ public class KMACXOF256 {
         // TODO: if the bit string S is not byte-oriented (i.e., len(S) is not a multiple of 8), the bit string
         //returned from encode_string(S) is also not byte-oriented. However, if len(S) is a multiple of 8,
         //then the length of the output of encode_string(S) will also be a multiple of 8
-        return appendBytes(left_encode(S.length*8), S);
+        return appendBytes(left_encode(S.length * 8), S);
     }
-    public byte[] bytepad(byte[] /* bitstring? */ X, int w) {
-        // The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
-        //the result with zeros until it is a byte string whose length in bytes is a multiple of w. In general,
-        //bytepad is intended to be used on encoded strings—the byte string bytepad(encode_string(S), w)
-        //can be parsed unambiguously from its beginning, whereas bytepad does not provide
-        //unambiguous padding for all input strings.
-        // data returned is a byte string of form [ left_encode(w) || X || 0*n ]
-        var z = appendBytes(left_encode(w), X); // TODO: conversion of X to byte[] from bitstring
-        while(z.length % w != 0) {
-            z = appendBytes(z, new byte[]{ 0 });
+//    public byte[] bytepad(byte[] /* bitstring? */ X, int w) {
+//        // The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
+//        //the result with zeros until it is a byte string whose length in bytes is a multiple of w. In general,
+//        //bytepad is intended to be used on encoded strings—the byte string bytepad(encode_string(S), w)
+//        //can be parsed unambiguously from its beginning, whereas bytepad does not provide
+//        //unambiguous padding for all input strings.
+//        // data returned is a byte string of form [ left_encode(w) || X || 0*n ]
+//        var z = appendBytes(left_encode(w), X); // TODO: conversion of X to byte[] from bitstring
+//        while(z.length % w != 0) {
+//            z = appendBytes(z, new byte[]{ 0 });
+//        }
+//        return z;
+//    }
+
+    /**
+     * Apply the NIST bytepad primitive to a byte array X with encoding factor w.
+     *
+     * @param X the byte array to bytepad
+     * @param w the encoding factor (the output length must be a multiple of w)
+     * @return the byte-padded byte array X with encoding factor w.
+     */
+    public static byte[] bytepad(byte[] X, int w) {
+        // copied from slides UWT TCSS 487
+// Validity Conditions: w > 0
+        assert w > 0;
+// 1. z = left_encode(w) || X.
+        byte[] wenc = left_encode(w);
+        byte[] z = new byte[w * ((wenc.length + X.length + w - 1) / w)];
+// NB: z.length is the smallest multiple of w that fits wenc.length + X.length
+        System.arraycopy(wenc, 0, z, 0, wenc.length);
+        System.arraycopy(X, 0, z, wenc.length, X.length);
+// 2. (nothing to do: len(z) mod 8 = 0 in this byte-oriented implementation)
+// 3. while (len(z)/8) mod w ≠ 0: z = z || 00000000
+        for (int i = wenc.length + X.length; i < z.length; i++) {
+            z[i] = (byte) 0;
         }
+// 4. return z
         return z;
     }
-//    public byte[] substring(byte[] /* bitstring? */ X, int a, int b) {
-//        // returns a substring from the bitstring X containing values [a, b-1] inclusive.
-//        // FIXME: assumes a and b are multiples of 8, and X is a byte string.
-//        // Specifically this function is supposed to work with BIT strings.
-//        a = a/8;
-//        b = b/8;
-//
-//        if(a >= b || a >= X.length) {
-//            return new byte[]{};
-//        }
-//        if(b <= X.length) {
-//            var R = new byte[b-1 - a]; // new bitstring
-//            System.arraycopy(X, a, R, 0, R.length);
-//            return R;
-//        }
-//        return Arrays.copyOfRange(X, a, X.length-1);
-//    }
     public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
         /*
          - X is the main input bit string. It may be of any length3, including zero.
@@ -100,10 +118,11 @@ public class KMACXOF256 {
          that are whole bytes; if so, a fractional-byte input string or a request for an output length that is
          not a multiple of 8 would result in an error.
          */
-        if(L % 8 != 0) throw new IllegalArgumentException("Only whole bytes are supported.");
-        if(L == 0) return new byte[0];
+        if (L % 8 != 0)
+            throw new IllegalArgumentException("Only whole bytes are supported.");
+        if (L == 0) return new byte[0];
 
-        if(N.length == 0 && S.length == 0) {
+        if (N.length == 0 && S.length == 0) {
             if (mode == 128) {
                 var ctx = new Sha3.sha3_ctx_t();
                 Sha3.shake128_init(ctx);
@@ -115,13 +134,89 @@ public class KMACXOF256 {
             return ctx.b; // FIXME: what/where is shake256()?
             // return SHAKE(X, L)
         }
-        if(mode == 128) {
+        if (mode == 128) {
             // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
         }
         // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
 
         var ctx = new Sha3.sha3_ctx_t();
         Sha3.sha3_keccakf(ctx);
-        return new byte[]{};// FIXME: not properly implemented. see above coments.
+        return ctx.b;// FIXME: not properly implemented. see above coments.
+    }
+    public static byte[] absorb(Sha3.sha3_ctx_t ctx, byte[] X) {
+        return ctx.b;
+    }
+    /**
+     * • X is the main input bit string. It may be of any length3, including zero.
+     * • L is an integer representing the requested output length4 in bits.
+     * • N is a function-name bit string, used by NIST to define functions based on cSHAKE.
+     * When no function other than cSHAKE is desired, N is set to the empty string.
+     * • S is a customization bit string. The user selects this string to define a variant of the
+     * function. When no customization is desired, S is set to the empty string5
+     * @return byte[]
+     */
+    public static byte[] cSHAKE256(byte[] X, int L, byte[] N, byte[] S) {
+//        Validity Conditions: len(N)< 2**2040 and len(S)< 2**2040
+//        1. If N = "" and S = "": // N is always "KMAC" for this assignment
+//        return SHAKE256(X, L);
+//        2. Else:
+//        return KECCAK[512](bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L).
+        var ctx = new Sha3.sha3_ctx_t();
+        Sha3.sha3_init(ctx, L);
+        // rate(r) for cSHAKE256 is 136
+        var bytepad_data = bytepad(appendBytes(encode_string(N), encode_string(S)), 136);
+        xor(ctx.b, bytepad_data); //                  Sha3.phex(ctx.b);
+        Sha3.sha3_keccakf(ctx);   //                  Sha3.phex(ctx.b);
+
+        X = appendBytes(X, new byte[]{0x04});//       Sha3.phex(X);
+
+        xor(ctx.b, X);                           //   Sha3.phex(ctx.b);
+        ctx.b[135] ^= (byte) 0x80; // xof?
+        Sha3.sha3_keccakf(ctx);                    // Sha3.phex(ctx.b); // ????
+//      Sha3.shake_update(ctx, X, X.length); // XOF mode? absorb X in 136B chunks? append 0x04?
+        //Sha3.sha3_update(ctx, X, X.length); Sha3.phex(ctx.b);
+        return squeeze(ctx, L/8);
+//
+//        var out = new byte[L>>3];
+//        //Sha3.shake_out(ctx, out, L);
+//        Sha3.sha3_final(out, ctx);
+//        Sha3.phex(out);
+        //return ctx.b;
+    }
+    static byte[] squeeze(Sha3.sha3_ctx_t ctx, int output_length) {
+//        var ctx = new Sha3.sha3_ctx_t();
+        var rate = 136;
+        var c = 1600/8 - rate; // n bits = r + c; c = n - r
+        // state size n = r + c, or 200 bytes
+        //Sha3.sha3_update(ctx, input, input.length); // absorb?
+
+        // squeeze?
+        byte[] out = new byte[output_length];
+        var ptr = 0;
+        while(ptr < output_length) {
+            if((output_length - ptr) >= rate) {
+                System.arraycopy(ctx.b, 0, out, ptr, rate);
+                ptr += rate;
+            } else {
+                // edge case of the end of output, when we don't take the whole rate.
+                System.arraycopy(ctx.b, 0, out, ptr, output_length % rate);
+                ptr += output_length % rate;
+            }
+            Sha3.sha3_keccakf(ctx);
+        }
+        return out;
+    }
+    private static byte[] right_encode(int i) {
+        // we only ever call right_encode(0).
+        return new byte[]{(byte) 0, (byte) 1};
+    }
+
+    public static byte[] KMACXOF256(byte[] K, byte[] X, int L, byte[] S) {
+        // NIST.SP.800-185 page 11
+//    Validity Conditions: len(K) <2**2040 and 0 ≤ L and len(S) < 2**2040
+//            1. newX = bytepad(encode_string(K), 136) || X || right_encode(0).
+//            2. return cSHAKE256(newX, L, “KMAC”, S).
+        var newX = appendBytes(bytepad(encode_string(K), 136), X, right_encode(0));
+        return cSHAKE256(newX, L, "KMAC".getBytes(), S);
     }
 }

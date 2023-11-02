@@ -6,6 +6,8 @@
         // include <time.h>
         // include "sha3.h"
 
+import java.security.SecureRandom;
+
 // read a hex string, return byte length or -1 on error.
 class Main {
     static int test_hexdigit(char ch) {
@@ -211,30 +213,64 @@ class Main {
 
         //return 0;
 
-        System.out.println("test_left_encode:");
-        System.out.println(KMACXOF256_tests.test_left_encode());
-        System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
+//        System.out.println("test_left_encode:");
+//        System.out.println(KMACXOF256_tests.test_left_encode());
+        System.out.printf("sha3 words test: %s\n", Sha3_tests.words_test());
         // Collect plaintext bytes from whatever source necessary.
-
-
+//        var res =
+//                KMACXOF256.KMACXOF256( // NIST sample #1
+//                        "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_".getBytes(), // K
+//                        new byte[]{0,1,2,3},
+//                512,
+//                "".getBytes());
+        //Sha3.phex(res);
+        //Sha3.phex(KMACXOF256.left_encode(0xA8));
+        KMACXOF256_tests.cSHAKE256_test_Sample3();
+/*
+        //////////////////////////////////////////////////////
+        // requirements:
+        var emptystr = new byte[]{};
+        var m = "sample message".getBytes();
+        var pw = "password".getBytes();
+        //------
 //Computing a cryptographic hash h of a byte array m:
 //▪ h <- KMACXOF256(“”, m, 512, “D”)
-
+        var h = KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());
+        //-----
 //• Compute an authentication tag t of a byte array m under passphrase pw:
 //▪ t <- KMACXOF256(pw, m, 512, “T”)
+        var t = KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes());
+        //------
 
 //• Encrypting a byte array m symmetrically under passphrase pw:
 //▪ z <- Random(512)
+        var z = new byte[64]; // 64B = 512b
+        new SecureRandom().nextBytes(z);
 //▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
-//▪ c <- KMACXOF256(ke, “”, |m|, “SKE”)  m
+        byte[] ke, ka;
+        var kz = KMACXOF256.KMACXOF256(
+                KMACXOF256.appendBytes(z, pw),
+                emptystr,
+                1024,
+                "S".getBytes());
+        // split (ke || ka) <- kz
+        ke = ka = kz;
+//▪ c <- KMACXOF256(ke, “”, |m|, “SKE”) xor m
+        var c = KMACXOF256.xor(
+                    KMACXOF256.KMACXOF256(ke, emptystr, m.length, "SKE".getBytes()), m);
+
 //▪ t <- KMACXOF256(ka, m, 512, “SKA”)
+        t =  KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
 //▪ symmetric cryptogram: (z, c, t)
+        // TODO: return cryptogram? what format is (z, c, t)?
+//---------
 
 //• Decrypting a symmetric cryptogram (z, c, t) under passphrase pw:
 //▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
-//▪ m  KMACXOF256(ke, “”, |c|, “SKE”)  c
-//▪ t’  KMACXOF256(ka, m, 512, “SKA”)
-//▪ accept if, and only if, t’ = t
+//▪ m <- KMACXOF256(ke, “”, |c|, “SKE”)  c
+//▪ t_prime <- KMACXOF256(ka, m, 512, “SKA”)
+//▪ accept if, and only if, t_prime == t
+*/
     }
 
 }

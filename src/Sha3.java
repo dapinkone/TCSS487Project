@@ -9,6 +9,7 @@
 // Common issue is sign bit extension when
 // implicit or explicit casting to larger types, such as byte->int.
 // requires a mask of & 0xFF to truncate.
+import java.security.MessageDigest;
 public class Sha3 {
     // TODO: these are all static methods. sha_ctx could be tied to the sha3 object, and save on arguments & complexity.
     public static int KECCAKF_ROUNDS = 24;
@@ -19,6 +20,35 @@ public class Sha3 {
         }
         return u;
     }
+    public static void phex(byte[] Xs) {
+        // prints a byte array
+        for(var x : Xs) System.out.printf("%02X ", x);
+        System.out.println();
+    }
+    public static void kinit256(sha3_ctx_t ctx, byte[] K, byte[] S) {
+        // initializes context with a given key and customization string
+        // used by KMACXOF256, slides p14
+        var encoded_k = KMACXOF256.encode_string(K);
+        var encoded_s = KMACXOF256.encode_string(S);
+
+        var padded_k = KMACXOF256.bytepad(encoded_k, 0xA8/* 168 */);
+        var encoded_N = KMACXOF256.encode_string("KMAC".getBytes());
+
+        //phex(encoded_N);
+        var bpad_data = KMACXOF256.bytepad(
+                KMACXOF256.appendBytes(encoded_N, encoded_s), 0xA8);
+        Sha3.sha3_update(ctx, bpad_data, 0xA8);
+        //phex(ctx.b); // good 0x6B_B3...
+
+        KMACXOF256.xor(ctx.b, padded_k);
+//        phex(padded_k);
+//        phex(ctx.b);
+        Sha3.sha3_keccakf(ctx);
+        //phex(ctx.b); // good 0x97_83_37_...
+    }
+
+
+
     // state context
 //    typedef struct {
 //        union {                                 // state:
@@ -42,11 +72,23 @@ public class Sha3 {
         public long[] byWord() { // ctx.st.q is supposed to be uint64_t
             // returns ctx.b as an array of longs/words
             long[] words = new long[b.length/8];
-            for(int word=0; word < words.length; word++) {
-                for(int i=0; i < 8; i++) { // storing 8 bytes into the long
-                    words[word] |= (b[word * 8 + i] & 0xFFL) << (7-i)*8;
+            for (int i = 0; i < 25; i++) {
+                var v = new long[8];
+                // extract necessary bytes from b
+                //System.arraycopy(this.b, i * 8, v, 0, 8);
+                for(int j=0; j < 8; j++) {
+                    v[j] = this.b[i*8 + j] & 0xFFL;
                 }
-            }
+
+            words[i] = v[7] |
+                    (v[6] << 8) |
+                    (v[5] << 16) |
+                    (v[4] << 24) |
+                    (v[3] << 32) |
+                    (v[2] << 40) |
+                    (v[1] << 48) |
+                    (v[0] << 56);
+        }
             return words;
         }
         public void setWord(long[] words) {
@@ -80,7 +122,7 @@ public class Sha3 {
     // SHAKE128 and SHAKE256 extensible-output functions
 //#define shake128_init(c) sha3_init(c, 16)
     static sha3_ctx_t shake128_init(sha3_ctx_t c) {
-        sha3_init(c, 16);
+sha3_init(c, 16);
         return c;
     }
 
@@ -99,6 +141,16 @@ public class Sha3 {
 //#endif
 
     static void sha3_keccakf(/*uint64_t st[25]*/ /*long[] st*/ sha3_ctx_t c) {
+        // keccakf[1600] (1600bit == 200bytes) equivelent to keccak-p[1600,24]
+        // as per NIST.FIPS.202 sec 3.4 "Comparison with KECCAK-f"
+        // capacity = 1600, rounds = 24, what is rate?
+        // the capacity c is the integer b - r; r = rate, b = "width" (FIPS202, p18)
+        // 1600 = b - r
+
+        // SHA3-256(M) = KECCAK[512] (M || 01, 256) // FIPS202, sec 6.1
+        // In each case, the capacity is double the digest length, i.e., c = 2d, and the resulting input N to
+        // KECCAK[c] is the message with the suffix appended, i.e, N = M || 01.
+        ///////
         // original takes an array of uint64_t, but ctx.q was utilized only
         // in calls to this function, so we've refactored to pass in a context as
         // is common throughout the codebase.
@@ -221,6 +273,7 @@ public class Sha3 {
             // "data" is void* passed into sha3_update from sha3() void* `in`, which is msg, a uint8_t[256] from main.c.
             c.b[j++] ^= data[i];
             if (j >= c.rsiz) {
+                //System.out.print('.'); phex(c.b);
                 sha3_keccakf(c);
                 j = 0;
             }
@@ -252,28 +305,15 @@ public class Sha3 {
 
     public static void sha3(byte[] in, long inlen, byte[] md, int mdlen) {
         sha3_ctx_t sha3ctx = new sha3_ctx_t();
-        System.out.printf("%d %d ", inlen, mdlen);
-
         sha3_init( sha3ctx, mdlen);
-        System.out.printf("init:");
-        for(int i=0; i < inlen; i++) System.out.printf("%02X", in[i]);
-        System.out.println("\n");
-
         sha3_update( sha3ctx, in, inlen);
-        System.out.printf("update:");
-        for(int i=0; i < sha3ctx.b.length; i++) System.out.printf("%02X", sha3ctx.b[i]);
-        System.out.println("\n");
-
         sha3_final(md, sha3ctx);
-        System.out.printf("final:");
-        for(int i=0; i < sha3ctx.b.length; i++) System.out.printf("%02X", sha3ctx.b[i]);
-        System.out.println("\n");
         //return md;
     }
 
 // SHAKE128 and SHAKE256 extensible-output functionality
 
-    static void shake_xof(sha3_ctx_t c) {
+    static void shake_xof(sha3_ctx_t c) { // endian-ness? see KMACXOF256 lecture slides.
         c.b[c.pt] ^= 0x1F;
         c.b[c.rsiz - 1] ^= 0x80;
         sha3_keccakf(c);
