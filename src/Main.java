@@ -1,13 +1,160 @@
 // main.c
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 
-// include <stdio.h>
-        // include <string.h>
-        // include <time.h>
-        // include "sha3.h"
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
-// read a hex string, return byte length or -1 on error.
 class Main {
+
+    private static final Scanner scanner = new Scanner(System.in);
+    private static KMACXOF256 kmacxof256 = new KMACXOF256();
+    private static final int DEFAULT_MODE = 256;
+    private static final int NUMBER_OF_BYTES = 512;
+
+    public static void main(String args[]) {
+        if (test_sha3() == 0 && test_shake() == 0)
+            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
+        //test_speed();
+
+        //return 0;
+
+        System.out.println("testenc:");
+        System.out.println(KMACXOF256_tests.tstenc8());
+        System.out.println("test_left_encode:");
+        System.out.println(KMACXOF256_tests.test_left_encode());
+        System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
+
+        System.out.println("Welcome to the encryption");
+        while(true) {
+            System.out.println("\nPlease choose a number below:");
+            System.out.println("1. Compute a cryptographic hash of a file");
+            System.out.println("2. Compute a cryptographic hash of text");
+            System.out.println("3. Compute an authentication tag of a file");
+            System.out.println("4. Compute an authentication tag of a text");
+            System.out.println("5. Encrypt a data file");
+            System.out.println("6. Decrypt a symmetric cryptogram");
+            System.out.println("7. Exit");
+
+            System.out.print("Enter your choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch(choice) {
+                case 1:
+                    hashFile();
+                    break;
+
+                case 2:
+                    hashText();
+                    break;
+
+                case 3:
+                    macOfFile();
+                    break;
+
+                case 4:
+                    tagOfText();
+                    break;
+
+                case 5:
+                    encryptFile();
+                    break;
+
+                case 6:
+                    decryptFile();
+                    break;
+
+                case 7:
+                    System.out.println("Exiting Encryption");
+                    System.exit(0);
+
+                default:
+                    System.out.println("Invalid option. Please try again");
+            }
+        }
+        // User enters pass phrase
+        // User enters a file
+
+        // encrypt
+
+        // decrypt
+    }
+
+    private static void hashFile() {
+        System.out.print("Enter the file path to hash: ");
+        String filePath = scanner.nextLine();
+        try {
+            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+            byte[] hash = kmacxof256.cSHAKE(DEFAULT_MODE, fileData, NUMBER_OF_BYTES, new byte[0], new byte[0]);
+            System.out.println("Hash: " + bytesToHex(hash));
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
+    private static void macOfFile() {
+        System.out.print("Enter the file path for MAC computation: ");
+        String filePath = scanner.nextLine();
+        System.out.print("Enter the passphrase: ");
+        String passphrase = scanner.nextLine();
+        try {
+            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+            byte[] mac = kmacxof256.cSHAKE(256, fileData, 512, passphrase.getBytes(), "MAC".getBytes());
+            System.out.println("MAC: " + bytesToHex(mac));
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+    }
+
+    private static void encryptFile() {
+        System.out.print("Enter the file path to encrypt: ");
+        String filePath = scanner.nextLine();
+        System.out.print("Enter the passphrase: ");
+        String passphrase = scanner.nextLine();
+        try {
+            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+            byte[] encryptedData = kmacxof256.symmetricEncrypt(fileData, passphrase);
+            Path encryptedFilePath = Paths.get(filePath + ".encrypted");
+            Files.write(encryptedFilePath, encryptedData);
+            System.out.println("Encrypted file created: " + encryptedFilePath);
+        } catch (IOException e) {
+            System.out.println("Error encrypting file: " + e.getMessage());
+        }
+    }
+
+    private static void decryptFile() {
+        System.out.print("Enter the encrypted file path to decrypt: ");
+        String filePath = scanner.nextLine();
+        System.out.print("Enter the passphrase: ");
+        String passphrase = scanner.nextLine();
+        try {
+            byte[] encryptedData = Files.readAllBytes(Paths.get(filePath));
+            // Assuming the encrypted file structure is: z || c || t
+            byte[] z = Arrays.copyOfRange(encryptedData, 0, 64); // first 512 bits
+            byte[] c = Arrays.copyOfRange(encryptedData, 64, encryptedData.length - 64); // middle portion
+            byte[] t = Arrays.copyOfRange(encryptedData, encryptedData.length - 64, encryptedData.length); // last 512 bits
+            byte[] decryptedData = kmacxof256.symmetricDecrypt(z, c, t, passphrase);
+            Path decryptedFilePath = Paths.get(filePath + ".decrypted");
+            Files.write(decryptedFilePath, decryptedData);
+            System.out.println("Decrypted file created: " + decryptedFilePath);
+        } catch (IOException e) {
+            System.out.println("Error decrypting file: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Decryption failed: " + e.getMessage());
+        }        
+    }
     static int test_hexdigit(char ch) {
         if (ch >= '0' && ch <= '9')
             return ch - '0';
@@ -155,7 +302,7 @@ class Main {
                 for(int x=0; x < 20; x++) buf[x] = (byte) 0xA3;
 
                 for (j = 0; j < 200; j += 20)
-                    Sha3.shake_update( sha3, buf, 20);
+                    Sha3.sha3_update(sha3, buf, 20);
             }
 
             Sha3.shake_xof( sha3);               // switch to extensible output
@@ -204,19 +351,6 @@ class Main {
 
     }*/
     // main
-    public static void main(String args[]) {
-        if (test_sha3() == 0 && test_shake() == 0)
-            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
-        //test_speed();
 
-        //return 0;
-
-        System.out.println("testenc:");
-        System.out.println(KMACXOF256_tests.tstenc8());
-        System.out.println("test_left_encode:");
-        System.out.println(KMACXOF256_tests.test_left_encode());
-        System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
-
-    }
 
 }

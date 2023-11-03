@@ -1,9 +1,14 @@
 import jdk.jshell.spi.ExecutionControl;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 public class KMACXOF256 {
+
+    public static final int NUMBER_OF_BYTES = 512; // 64 bytes = 512 bits
+
     // basic operations & functions from FIPS 202
     public static byte enc8(byte b) {
         // return (byte) (Integer.reverse(b & 0xFF) >>> 24);
@@ -117,6 +122,15 @@ public class KMACXOF256 {
         }
         return Arrays.copyOfRange(X, a, X.length-1);
     }
+    /**
+     * Main function of KMACXOF256.
+     * @param mode
+     * @param X
+     * @param L
+     * @param N
+     * @param S
+     * @return
+     */
     public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
         /*
          - X is the main input bit string. It may be of any length3, including zero.
@@ -148,7 +162,7 @@ public class KMACXOF256 {
             Sha3.shake_out(ctx, Z, L / 8);
             return Z;
         }
-        
+
         byte[] encodedN = encode_string(N);
         byte[] encodedS = encode_string(S);
 
@@ -166,6 +180,8 @@ public class KMACXOF256 {
         // absorb the input X
         Sha3.sha3_update(ctx, X, X.length);
 
+        // Apply domain separation and padding
+        Sha3.shake_xof(ctx);
         if(mode == 128) {
             ctx.b[ctx.pt] ^= 0x04;
             // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
@@ -180,5 +196,58 @@ public class KMACXOF256 {
         byte[] Z = new byte[L / 8];
         Sha3.shake_out(ctx, Z, L / 8);
         return Z;// FIXME: not properly implemented. see above coments.
+    }
+
+    private byte[] randomBytes() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[NUMBER_OF_BYTES / 8]; // 8 bits = 1 byte
+        random.nextBytes(bytes);
+        return bytes;
+    }
+
+    public byte[] symmetricEncrypt(byte[] m, String pw) {
+        // 1. generate random 512 bit value
+        byte[] z = randomBytes();
+
+        // 2. derive encryption and authentication keys
+        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
+        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
+
+        // split (Ke || Ka) into two 512 bits keys
+        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
+
+        // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
+        byte[] c = cSHAKE(256, ke, NUMBER_OF_BYTES, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
+        c = bitstringXor(c, m);
+
+        // t <- KMACXOF256(ka, m , 512, "SKA")
+        byte[] t = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+
+        // symmetric cyrptogram: (z, c, t)
+        byte[] symmetricCryptogram = appendBytes(z, appendBytes(c, t));
+        return symmetricCryptogram;
+    }
+
+    public byte[] symmetricDecrypt(byte[] z, byte[] c, byte[] t, String pw) {
+        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
+        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
+
+        // split (ke || ka) into two 512-bit keys
+        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
+
+        // m <- KMACXOF256(ke, "", |c|, "SKE") xor c
+        byte[] m = cSHAKE(256, ke, c.length * 8, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
+        m = bitstringXor(m, c);
+
+        // tPrime <- KMACXOF256(ka, m, 512, "SKA")
+        byte[] tPrime = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+
+        if (Arrays.equals(tPrime, t)) {
+            return m;
+        } else {
+            throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
+        }
     }
 }
