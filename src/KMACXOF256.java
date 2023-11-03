@@ -133,31 +133,52 @@ public class KMACXOF256 {
         if(L % 8 != 0) throw new IllegalArgumentException("Only whole bytes are supported.");
         if(L == 0) return new byte[0];
 
+
+        // Check if N and S are empty; default to SHAKE128 and SHAKE256
+        if (N.length == 0 && S.length == 0) {
+            Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
+            if (mode == 128 ) {
+                Sha3.shake128_init(ctx);
+            } else {
+                Sha3.shake256_init(ctx);
+            }
+            Sha3.sha3_update(ctx, X, X.length);
+            Sha3.shake_xof(ctx);
+            byte[] Z = new byte[L / 8];
+            Sha3.shake_out(ctx, Z, L / 8);
+            return Z;
+        }
+        
         byte[] encodedN = encode_string(N);
         byte[] encodedS = encode_string(S);
+
         byte[] bytePadded = bytepad(appendBytes(encodedN, encodedS), mode == 128 ? 168 : 136);
-        byte[] newX = appendBytes(bytePadded, X);
-        newX = appendBytes(newX, new byte[]{0});
+        // byte[] newX = appendBytes(bytePadded, X);
+        // newX = appendBytes(newX, new byte[]{0});
 
-        if(N.length == 0 && S.length == 0) {
-            if (mode == 128) {
-                var ctx = new Sha3.sha3_ctx_t();
-                Sha3.shake128_init(ctx);
-                return ctx.b; // FIXME: what/where is shake128()?
-            }
-            // default 256
-            var ctx = new Sha3.sha3_ctx_t();
-            Sha3.shake256_init(ctx);
-            return ctx.b; // FIXME: what/where is shake256()?
-            // return SHAKE(X, L)
-        }
+        // initialize content
+        Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
+        Sha3.sha3_init(ctx, mode == 128 ? 16 : 32);
+
+        // absorb byte-padded N and S
+        Sha3.sha3_update(ctx, bytePadded, bytePadded.length);
+
+        // absorb the input X
+        Sha3.sha3_update(ctx, X, X.length);
+
         if(mode == 128) {
+            ctx.b[ctx.pt] ^= 0x04;
             // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
+        } else {
+            ctx.b[ctx.pt] ^= 0x04;
+            // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
         }
-        // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
-
-        var ctx = new Sha3.sha3_ctx_t();
+        ctx.b[ctx.rsiz - 1] ^= 0x08;
         Sha3.sha3_keccakf(ctx);
-        return new byte[]{};// FIXME: not properly implemented. see above coments.
+
+        // Squeeze out output
+        byte[] Z = new byte[L / 8];
+        Sha3.shake_out(ctx, Z, L / 8);
+        return Z;// FIXME: not properly implemented. see above coments.
     }
 }

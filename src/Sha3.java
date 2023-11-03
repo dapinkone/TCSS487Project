@@ -114,13 +114,6 @@ public class Sha3 {
         return c;
     }
 
-//    define shake_update sha3_update
-//    void shake_xof(sha3_ctx_t *c);
-//
-//    void shake_out(sha3_ctx_t *c, void *out, size_t len);
-//
-//#endif
-
     static void sha3_keccakf(/*uint64_t st[25]*/ /*long[] st*/ sha3_ctx_t c) {
         // original takes an array of uint64_t, but ctx.q was utilized only
         // in calls to this function, so we've refactored to pass in a context as
@@ -191,9 +184,6 @@ public class Sha3 {
                     st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
                 }
             }
-            
-            // Roate left 64 bit
-
             //  Iota
             st[0] ^= keccakf_rndc[r];
         }
@@ -220,7 +210,10 @@ public class Sha3 {
 
 // update state with more data
 
-    static int sha3_update(sha3_ctx_t c, byte[] data, long len) { // void pointers?
+    static void sha3_update(sha3_ctx_t c, byte[] data, long len) throws IllegalArgumentException { // void pointers?
+        if (data == null || len < 0 || len > Long.MAX_VALUE) {
+            throw new IllegalArgumentException("sha3_update: data is either null or length is < 0 or too big");
+        }
         int j = c.pt;
         for (int i = 0; i < len; i++) {
             // "data" is void* passed into sha3_update from sha3() void* `in`, which is msg, a uint8_t[256] from main.c.
@@ -231,26 +224,26 @@ public class Sha3 {
             }
         }
         c.pt = j;
-        return 1; // what purpose does return 1 serve? we never return -1/0 for failures.
     }
-    static int shake_update(sha3_ctx_t c, byte[] data, long len) {
-        return sha3_update(c, data, len);
-    }
+
+    // static int shake_update(sha3_ctx_t c, byte[] data, long len) {
+    //     return sha3_update(c, data, len);
+    // }
 
 // finalize and output a hash
 
-    static int sha3_final(byte[] md, sha3_ctx_t c) {
-        int i;
+    static void sha3_final(byte[] md, sha3_ctx_t c) throws IllegalArgumentException {
+        if (md == null) {
+            throw new IllegalArgumentException("sha3_final: md is null");
+        }       
 
         c.b[c.pt] ^= 0x06;
         c.b[c.rsiz - 1] ^= 0x80;
         sha3_keccakf(c);
 
-        for (i = 0; i < c.mdlen; i++) {
+        for (int i = 0; i < c.mdlen; i++) {
             md[i] = c.b[i];
         }
-
-        return 1;
     }
 
 // compute a SHA-3 hash (md) of given byte length(mdlen) from "in"
