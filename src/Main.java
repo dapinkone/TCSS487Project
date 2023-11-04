@@ -7,6 +7,8 @@
         // include "sha3.h"
 
 import java.security.SecureRandom;
+import java.util.Arrays;
+import static java.util.Arrays.compare;
 
 // read a hex string, return byte length or -1 on error.
 class Main {
@@ -226,7 +228,7 @@ class Main {
         //Sha3.phex(res);
         //Sha3.phex(KMACXOF256.left_encode(0xA8));
         KMACXOF256_tests.cSHAKE256_test_Sample3();
-/*
+
         //////////////////////////////////////////////////////
         // requirements:
         var emptystr = new byte[]{};
@@ -236,10 +238,12 @@ class Main {
 //Computing a cryptographic hash h of a byte array m:
 //▪ h <- KMACXOF256(“”, m, 512, “D”)
         var h = KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());
+        System.out.print("Hash:"); Sha3.phex(h);
         //-----
 //• Compute an authentication tag t of a byte array m under passphrase pw:
 //▪ t <- KMACXOF256(pw, m, 512, “T”)
         var t = KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes());
+        System.out.print("Tag:");Sha3.phex(t);
         //------
 
 //• Encrypting a byte array m symmetrically under passphrase pw:
@@ -254,7 +258,8 @@ class Main {
                 1024,
                 "S".getBytes());
         // split (ke || ka) <- kz
-        ke = ka = kz;
+        ke = Arrays.copyOfRange(kz, 0, kz.length/2);
+        ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
 //▪ c <- KMACXOF256(ke, “”, |m|, “SKE”) xor m
         var c = KMACXOF256.xor(
                     KMACXOF256.KMACXOF256(ke, emptystr, m.length, "SKE".getBytes()), m);
@@ -262,15 +267,34 @@ class Main {
 //▪ t <- KMACXOF256(ka, m, 512, “SKA”)
         t =  KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
 //▪ symmetric cryptogram: (z, c, t)
-        // TODO: return cryptogram? what format is (z, c, t)?
+        // return cryptogram? what format is (z, c, t)? z || c || t .
+        System.out.printf("cryptogram:"); Sha3.phex(KMACXOF256.appendBytes(z, c, t));
 //---------
 
 //• Decrypting a symmetric cryptogram (z, c, t) under passphrase pw:
+        // acquire z || c || t from file.
 //▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
+        kz = KMACXOF256.KMACXOF256(
+                KMACXOF256.appendBytes(z, pw),
+                emptystr,
+                1024,
+                "S".getBytes());
+        // split (ke || ka) <- kz
+        ke = Arrays.copyOfRange(kz, 0, kz.length/2);
+        ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
 //▪ m <- KMACXOF256(ke, “”, |c|, “SKE”)  c
+        m = KMACXOF256.xor(
+                KMACXOF256.KMACXOF256(ke, emptystr, c.length, "SKE".getBytes()),
+                c);
 //▪ t_prime <- KMACXOF256(ka, m, 512, “SKA”)
+        var t_prime = KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
 //▪ accept if, and only if, t_prime == t
-*/
+        if (compare(t, t_prime) == 0) {
+            //return decypted plaintext.
+        } else {
+            // throw exception/error that password is incorrect.
+        }
+
     }
 
 }
