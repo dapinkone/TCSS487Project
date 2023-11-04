@@ -306,4 +306,11 @@ sha3_init(c, 16);
         }
         c.pt = j;
     }
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) { // TODO: if this is used in file parsing, need options.
+            sb.append(String.format("%02X ", b));
+        }
+        return sb.toString();
+    }
 }

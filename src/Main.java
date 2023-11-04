@@ -227,8 +227,8 @@ class Main {
 //                "".getBytes());
         //Sha3.phex(res);
         //Sha3.phex(KMACXOF256.left_encode(0xA8));
-        KMACXOF256_tests.cSHAKE256_test_Sample3();
-
+        System.out.printf("cSHAKE256 #3: %s", KMACXOF256_tests.cSHAKE256_test_Sample3());
+/*
         //////////////////////////////////////////////////////
         // requirements:
         var emptystr = new byte[]{};
@@ -291,10 +291,12 @@ class Main {
 //▪ accept if, and only if, t_prime == t
         if (compare(t, t_prime) == 0) {
             //return decypted plaintext.
+            System.out.printf("Message recieved: %s", t);
         } else {
+            System.out.println("Mismatch. Incorrect password.");
             // throw exception/error that password is incorrect.
         }
-
+    */
     }
 
 }
