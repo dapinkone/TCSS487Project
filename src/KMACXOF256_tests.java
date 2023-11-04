@@ -69,11 +69,11 @@ public class KMACXOF256_tests {
         var L = 512; // # of requested bits output.
 
         var out = KMACXOF256.cSHAKE256(X, L, N, S);
-        var exp_text = """
-        D0 08 82 8E 2B 80 AC 9D 22 18 FF EE 1D 07 0C 48
-        B8 E4 C8 7B FF 32 C9 69 9D 5B 68 96 EE E0 ED D1
-        64 02 0E 2B E0 56 08 58 D9 C0 0C 03 7E 34 A9 69
-        37 C5 61 A7 4C 41 2B B4 C7 46 46 95 27 28 1C 8C""";
+        var exp_text = "D0 08 82 8E 2B 80 AC 9D 22 18 FF EE 1D 07 0C 48 " +
+        "B8 E4 C8 7B FF 32 C9 69 9D 5B 68 96 EE E0 ED D1 " +
+        "64 02 0E 2B E0 56 08 58 D9 C0 0C 03 7E 34 A9 69 " +
+        "37 C5 61 A7 4C 41 2B B4 C7 46 46 95 27 28 1C 8C";
+        // translate the output into a string. compare with expected text.
         Sha3.phex(out);
         return true;
     }

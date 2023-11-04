@@ -2,10 +2,6 @@ import static java.lang.Math.min;
 
 public class KMACXOF256 {
     // basic operations & functions from FIPS 202
-    public static long trunc(int s, long X) {
-        // trancates some bitstring X, returning the first s bits.
-        return 0L;
-    }
     public static byte[] xor(byte[] X, byte[] Y) {
         // X xor Y for strings of arbitrary but equal bit length.
         for(int i=0; i < min(X.length, Y.length); i++) X[i] ^= Y[i];
@@ -60,25 +56,8 @@ public class KMACXOF256 {
 //        The encode_string function is used to encode bit strings in a way that may be parsed
 //        unambiguously from the beginning of the string, S. The function is defined as follows:
         // Return left_encode(len(S)) || S.
-        // TODO: possible refactor for bitwise implementation of || operator?
-        // TODO: if the bit string S is not byte-oriented (i.e., len(S) is not a multiple of 8), the bit string
-        //returned from encode_string(S) is also not byte-oriented. However, if len(S) is a multiple of 8,
-        //then the length of the output of encode_string(S) will also be a multiple of 8
-        return appendBytes(left_encode(S.length * 8), S);
+        return appendBytes(left_encode(S.length * 8L), S);
     }
-//    public byte[] bytepad(byte[] /* bitstring? */ X, int w) {
-//        // The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
-//        //the result with zeros until it is a byte string whose length in bytes is a multiple of w. In general,
-//        //bytepad is intended to be used on encoded strings—the byte string bytepad(encode_string(S), w)
-//        //can be parsed unambiguously from its beginning, whereas bytepad does not provide
-//        //unambiguous padding for all input strings.
-//        // data returned is a byte string of form [ left_encode(w) || X || 0*n ]
-//        var z = appendBytes(left_encode(w), X); // TODO: conversion of X to byte[] from bitstring
-//        while(z.length % w != 0) {
-//            z = appendBytes(z, new byte[]{ 0 });
-//        }
-//        return z;
-//    }
 
     /**
      * Apply the NIST bytepad primitive to a byte array X with encoding factor w.
@@ -165,16 +144,16 @@ public class KMACXOF256 {
         Sha3.sha3_init(ctx, L);
         // rate(r) for cSHAKE256 is 136
         var bytepad_data = bytepad(appendBytes(encode_string(N), encode_string(S)), 136);
-        xor(ctx.b, bytepad_data); //                  Sha3.phex(ctx.b);
-        Sha3.sha3_keccakf(ctx);   //                  Sha3.phex(ctx.b);
+        xor(ctx.b, bytepad_data);
+        Sha3.sha3_keccakf(ctx);
 
-        X = appendBytes(X, new byte[]{0x04});//       Sha3.phex(X);
+        X = appendBytes(X, new byte[]{0x04});
 
-        xor(ctx.b, X);                           //   Sha3.phex(ctx.b);
+        xor(ctx.b, X);
         ctx.b[135] ^= (byte) 0x80; // xof?
-        Sha3.sha3_keccakf(ctx);                    // Sha3.phex(ctx.b); // ????
+        Sha3.sha3_keccakf(ctx);
 //      Sha3.shake_update(ctx, X, X.length); // XOF mode? absorb X in 136B chunks? append 0x04?
-        //Sha3.sha3_update(ctx, X, X.length); Sha3.phex(ctx.b);
+        //Sha3.sha3_update(ctx, X, X.length);
         return squeeze(ctx, L/8);
 //
 //        var out = new byte[L>>3];

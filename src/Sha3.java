@@ -25,27 +25,27 @@ public class Sha3 {
         for(var x : Xs) System.out.printf("%02X ", x);
         System.out.println();
     }
-    public static void kinit256(sha3_ctx_t ctx, byte[] K, byte[] S) {
-        // initializes context with a given key and customization string
-        // used by KMACXOF256, slides p14
-        var encoded_k = KMACXOF256.encode_string(K);
-        var encoded_s = KMACXOF256.encode_string(S);
-
-        var padded_k = KMACXOF256.bytepad(encoded_k, 0xA8/* 168 */);
-        var encoded_N = KMACXOF256.encode_string("KMAC".getBytes());
-
-        //phex(encoded_N);
-        var bpad_data = KMACXOF256.bytepad(
-                KMACXOF256.appendBytes(encoded_N, encoded_s), 0xA8);
-        Sha3.sha3_update(ctx, bpad_data, 0xA8);
-        //phex(ctx.b); // good 0x6B_B3...
-
-        KMACXOF256.xor(ctx.b, padded_k);
-//        phex(padded_k);
-//        phex(ctx.b);
-        Sha3.sha3_keccakf(ctx);
-        //phex(ctx.b); // good 0x97_83_37_...
-    }
+//    public static void kinit256(sha3_ctx_t ctx, byte[] K, byte[] S) {
+//        // initializes context with a given key and customization string
+//        // used by KMACXOF256, slides p14
+//        var encoded_k = KMACXOF256.encode_string(K);
+//        var encoded_s = KMACXOF256.encode_string(S);
+//
+//        var padded_k = KMACXOF256.bytepad(encoded_k, 0xA8/* 168 */);
+//        var encoded_N = KMACXOF256.encode_string("KMAC".getBytes());
+//
+//        //phex(encoded_N);
+//        var bpad_data = KMACXOF256.bytepad(
+//                KMACXOF256.appendBytes(encoded_N, encoded_s), 0xA8);
+//        Sha3.sha3_update(ctx, bpad_data, 0xA8);
+//        //phex(ctx.b); // good 0x6B_B3...
+//
+//        KMACXOF256.xor(ctx.b, padded_k);
+////        phex(padded_k);
+////        phex(ctx.b);
+//        Sha3.sha3_keccakf(ctx);
+//        //phex(ctx.b); // good 0x97_83_37_...
+//    }
 
 
 
@@ -183,18 +183,6 @@ sha3_init(c, 16);
         int i, j, r;
         long t;
         var bc = new long[5];
-        //System.out.println(ByteOrder.nativeOrder()); //little_endian is most common.
-//#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__ // Believe java handles this implicitly.
-//        uint8_t * v;
-//
-//        // endianess conversion. this is redundant on little-endian targets
-//        for (i = 0; i < 25; i++) {
-//            v = (uint8_t *) & st[i];
-//            st[i] = ((uint64_t) v[0]) | (((uint64_t) v[1]) << 8) |
-//                    (((uint64_t) v[2]) << 16) | (((uint64_t) v[3]) << 24) |
-//                    (((uint64_t) v[4]) << 32) | (((uint64_t) v[5]) << 40) |
-//                    (((uint64_t) v[6]) << 48) | (((uint64_t) v[7]) << 56);
-//        }
 
         // actual iteration
         for (r = 0; r < KECCAKF_ROUNDS; r++) {
@@ -234,21 +222,6 @@ sha3_init(c, 16);
             st[0] ^= keccakf_rndc[r];
         }
 
-//#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
-//        // endianess conversion. this is redundant on little-endian targets
-//        for (i = 0; i < 25; i++) {
-//            v = (uint8_t *) & st[i];
-//            t = st[i];
-//            v[0] = t & 0xFF;
-//            v[1] = (t >> 8) & 0xFF;
-//            v[2] = (t >> 16) & 0xFF;
-//            v[3] = (t >> 24) & 0xFF;
-//            v[4] = (t >> 32) & 0xFF;
-//            v[5] = (t >> 40) & 0xFF;
-//            v[6] = (t >> 48) & 0xFF;
-//            v[7] = (t >> 56) & 0xFF;
-//        }
-//#endif
         for(i=0; i < 25; i++) {
             st[i] = Long.reverseBytes(st[i]);
         }
@@ -273,7 +246,6 @@ sha3_init(c, 16);
             // "data" is void* passed into sha3_update from sha3() void* `in`, which is msg, a uint8_t[256] from main.c.
             c.b[j++] ^= data[i];
             if (j >= c.rsiz) {
-                //System.out.print('.'); phex(c.b);
                 sha3_keccakf(c);
                 j = 0;
             }
