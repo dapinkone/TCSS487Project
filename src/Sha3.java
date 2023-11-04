@@ -13,6 +13,12 @@ import java.security.MessageDigest;
 public class Sha3 {
     // TODO: these are all static methods. sha_ctx could be tied to the sha3 object, and save on arguments & complexity.
     public static int KECCAKF_ROUNDS = 24;
+    public static final long BYTE_MASK = 0xFF;
+//            #endif
+
+    //#ifndef ROTL64
+//#define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
+// In java, use Long.rotateLeft() instead.
     static long ROTL64(long x, long y) {
         var u = (((x) << (y)) | ((x) >>> (64 - (y))));
         if(64 - y < 0) {
@@ -58,6 +64,9 @@ public class Sha3 {
 //        int pt, rsiz, mdlen;                    // these don't overflow
 //    } sha3_ctx_t;
 //
+    /**
+     * This static class is implemented to behave as a union sharing the same st memory space.
+     */
     static class sha3_ctx_t {
         public byte[] b;
         //public long[] q;
@@ -69,6 +78,11 @@ public class Sha3 {
             //this.q = new long[25]; // uint64_t, removed in favor of byWord() / setWord()
             // to simulate underlying mechanics of union sharing the st memory space.
         }
+
+        /**
+         *
+         * @return an array of longs/words form of ctx.b
+         */
         public long[] byWord() { // ctx.st.q is supposed to be uint64_t
             // returns ctx.b as an array of longs/words
             long[] words = new long[b.length/8];
@@ -122,7 +136,7 @@ public class Sha3 {
     // SHAKE128 and SHAKE256 extensible-output functions
 //#define shake128_init(c) sha3_init(c, 16)
     static sha3_ctx_t shake128_init(sha3_ctx_t c) {
-sha3_init(c, 16);
+        sha3_init(c, 16);
         return c;
     }
 
@@ -131,14 +145,6 @@ sha3_init(c, 16);
         sha3_init(c, 32);
         return c;
     }
-
-//    define shake_update sha3_update
-
-//    void shake_xof(sha3_ctx_t *c);
-//
-//    void shake_out(sha3_ctx_t *c, void *out, size_t len);
-//
-//#endif
 
     static void sha3_keccakf(/*uint64_t st[25]*/ /*long[] st*/ sha3_ctx_t c) {
         // keccakf[1600] (1600bit == 200bytes) equivelent to keccak-p[1600,24]
@@ -180,20 +186,21 @@ sha3_init(c, 16);
         } ;
 
         // variables
-        int i, j, r;
+        int j, r;
         long t;
         var bc = new long[5];
+        //System.out.println(ByteOrder.nativeOrder()); //little_endian is most common.
 
         // actual iteration
         for (r = 0; r < KECCAKF_ROUNDS; r++) {
 
             // Theta
-            for (i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++) {
                 bc[i] = st[i] ^ st[i + 5] ^ st[i + 10] ^ st[i + 15] ^ st[i + 20];
             }
 
-            for (i = 0; i < 5; i++) {
-                t = bc[(i + 4) % 5] ^ ROTL64(bc[(i + 1) % 5], 1);
+            for (int i = 0; i < 5; i++) {
+                t = bc[(i + 4) % 5] ^ Long.rotateLeft(bc[(i + 1) % 5], 1);
                 for (j = 0; j < 25; j += 5) {
                     st[j + i] ^= t;
                 }
@@ -201,46 +208,43 @@ sha3_init(c, 16);
 
             // Rho Pi
             t = st[1];
-            for (i = 0; i < 24; i++) {
+            for (int i = 0; i < 24; i++) {
                 j = keccakf_piln[i];
                 bc[0] = st[j];
-                st[j] = ROTL64(t, keccakf_rotc[i]);
+                st[j] = Long.rotateLeft(t, keccakf_rotc[i]);
                 t = bc[0];
             }
 
             //  Chi
             for (j = 0; j < 25; j += 5) {
-                for (i = 0; i < 5; i++) {
+                for (int i = 0; i < 5; i++) {
                     bc[i] = st[j + i];
                 }
-                for (i = 0; i < 5; i++) {
+                for (int i = 0; i < 5; i++) {
                     st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
                 }
             }
-
             //  Iota
             st[0] ^= keccakf_rndc[r];
         }
 
-        for(i=0; i < 25; i++) {
+        for(int i=0; i < 25; i++) {
             st[i] = Long.reverseBytes(st[i]);
         }
         c.setWord(st);
     }
 
 // Initialize the context for SHA3
-
-    static int sha3_init(sha3_ctx_t c, int mdlen) {
+    static void sha3_init(sha3_ctx_t c, int mdlen) {
         c.setWord(new long[25]);
         c.mdlen = mdlen;
         c.rsiz = 200 - 2 * mdlen;
         c.pt = 0;
-        return 1; // TODO: redesign/refactor. would be better to return the sha3_ctx_t?
     }
 
 // update state with more data
 
-    static int sha3_update(sha3_ctx_t c, byte[] data, long len) { // void pointers?
+    static void sha3_update(sha3_ctx_t c, byte[] data, long len) { // void pointers?
         int j = c.pt;
         for (int i = 0; i < len; i++) {
             // "data" is void* passed into sha3_update from sha3() void* `in`, which is msg, a uint8_t[256] from main.c.
@@ -251,26 +255,26 @@ sha3_init(c, 16);
             }
         }
         c.pt = j;
-        return 1; // what purpose does return 1 serve? we never return -1/0 for failures.
     }
-    static int shake_update(sha3_ctx_t c, byte[] data, long len) {
-        return sha3_update(c, data, len);
-    }
+
+    // static void shake_update(sha3_ctx_t c, byte[] data, long len) {
+    //     sha3_update(c, data, len);
+    // }
 
 // finalize and output a hash
 
-    static int sha3_final(byte[] md, sha3_ctx_t c) {
-        int i;
+    static void sha3_final(byte[] md, sha3_ctx_t c) throws IllegalArgumentException {
+        if (md == null) {
+            throw new IllegalArgumentException("sha3_final: md is null");
+        }
 
         c.b[c.pt] ^= 0x06;
         c.b[c.rsiz - 1] ^= 0x80;
         sha3_keccakf(c);
 
-        for (i = 0; i < c.mdlen; i++) {
+        for (int i = 0; i < c.mdlen; i++) {
             md[i] = c.b[i];
         }
-
-        return 1;
     }
 
 // compute a SHA-3 hash (md) of given byte length(mdlen) from "in"
@@ -293,11 +297,9 @@ sha3_init(c, 16);
     }
 
     static void shake_out(sha3_ctx_t c, byte[] out, long len) {
-        int i;
-        int j;
 
-        j = c.pt;
-        for (i = 0; i < len; i++) {
+        int j = c.pt;
+        for (int i = 0; i < len; i++) {
             if (j >= c.rsiz) {
                 sha3_keccakf(c);
                 j = 0;

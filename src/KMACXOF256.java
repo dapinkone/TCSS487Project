@@ -1,8 +1,13 @@
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 import static java.lang.Math.min;
 
 public class KMACXOF256 {
+
+    public static final int NUMBER_OF_BYTES = 512; // 64 bytes = 512 bits
+
     // basic operations & functions from FIPS 202
     public static byte[] xor(byte[] X, byte[] Y) {
         // X xor Y for strings of arbitrary but equal bit length.
@@ -60,30 +65,31 @@ public class KMACXOF256 {
         // Return left_encode(len(S)) || S.
         return appendBytes(left_encode(S.length * 8L), S);
     }
-
     /**
-     * Apply the NIST bytepad primitive to a byte array X with encoding factor w.
-     *
-     * @param X the byte array to bytepad
-     * @param w the encoding factor (the output length must be a multiple of w)
-     * @return the byte-padded byte array X with encoding factor w.
+     * Applied the NIST bytepad primitive to a byte array X with encoding factor w.
+     * @param X byte array to bytepad
+     * @param w encoding factor (the output length must be a multiple of w)
+     * @return byte-padded byte array X with encoding factor w.
      */
-    public static byte[] bytepad(byte[] X, int w) {
-        // copied from slides UWT TCSS 487
-// Validity Conditions: w > 0
+    public byte[] bytepad(byte[] /* bitstring? */ X, int w) {
+        // The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
+        //the result with zeros until it is a byte string whose length in bytes is a multiple of w. In general,
+        //bytepad is intended to be used on encoded strings—the byte string bytepad(encode_string(S), w)
+        //can be parsed unambiguously from its beginning, whereas bytepad does not provide
+        //unambiguous padding for all input strings.
+        // data returned is a byte string of form [ left_encode(w) || X || 0*n ]
         assert w > 0;
-// 1. z = left_encode(w) || X.
-        byte[] wenc = left_encode(w);
-        byte[] z = new byte[w * ((wenc.length + X.length + w - 1) / w)];
-// NB: z.length is the smallest multiple of w that fits wenc.length + X.length
-        System.arraycopy(wenc, 0, z, 0, wenc.length);
-        System.arraycopy(X, 0, z, wenc.length, X.length);
-// 2. (nothing to do: len(z) mod 8 = 0 in this byte-oriented implementation)
-// 3. while (len(z)/8) mod w ≠ 0: z = z || 00000000
-        for (int i = wenc.length + X.length; i < z.length; i++) {
-            z[i] = (byte) 0;
+        // 1. z = left_encode(w) || X
+        byte[] encodedW = left_encode(w);
+        byte[] z = new byte[w * ((encodedW.length + X.length + w -1) / w)];
+        // NB:
+        System.arraycopy(encodedW, 0, z, 0, encodedW.length);
+        System.arraycopy(X, 0, z, encodedW.length, X.length);
+        // 2. (nothing to do in software: Len(z) mod 8 = 0 in this byte-oriented implementation)
+        // 3. while  (len(z) / 8) mod w != 0: z = z || 00000000
+        for (int i = encodedW.length + X.length; i < z.length; i++) {
+            z[i] = (byte)0;
         }
-// 4. return z
         return z;
     }
     public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
@@ -99,30 +105,57 @@ public class KMACXOF256 {
          that are whole bytes; if so, a fractional-byte input string or a request for an output length that is
          not a multiple of 8 would result in an error.
          */
-        if (L % 8 != 0)
-            throw new IllegalArgumentException("Only whole bytes are supported.");
-        if (L == 0) return new byte[0];
+        if(L % 8 != 0) throw new IllegalArgumentException("Only whole bytes are supported.");
+        if(L == 0) return new byte[0];
 
+
+        // Check if N and S are empty; default to SHAKE128 and SHAKE256
         if (N.length == 0 && S.length == 0) {
-            if (mode == 128) {
-                var ctx = new Sha3.sha3_ctx_t();
+            Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
+            if (mode == 128 ) {
                 Sha3.shake128_init(ctx);
-                return ctx.b; // FIXME: what/where is shake128()?
+            } else {
+                Sha3.shake256_init(ctx);
             }
-            // default 256
-            var ctx = new Sha3.sha3_ctx_t();
-            Sha3.shake256_init(ctx);
-            return ctx.b; // FIXME: what/where is shake256()?
-            // return SHAKE(X, L)
+            Sha3.sha3_update(ctx, X, X.length);
+            Sha3.shake_xof(ctx);
+            byte[] Z = new byte[L / 8];
+            Sha3.shake_out(ctx, Z, L / 8);
+            return Z;
         }
-        if (mode == 128) {
-            // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
-        }
-        // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
 
-        var ctx = new Sha3.sha3_ctx_t();
+        byte[] encodedN = encode_string(N);
+        byte[] encodedS = encode_string(S);
+
+        byte[] bytePadded = bytepad(appendBytes(encodedN, encodedS), mode == 128 ? 168 : 136);
+        // byte[] newX = appendBytes(bytePadded, X);
+        // newX = appendBytes(newX, new byte[]{0});
+
+        // initialize content
+        Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
+        Sha3.sha3_init(ctx, mode == 128 ? 16 : 32);
+
+        // absorb byte-padded N and S
+        Sha3.sha3_update(ctx, bytePadded, bytePadded.length);
+
+        // absorb the input X
+        Sha3.sha3_update(ctx, X, X.length);
+
+        // Apply domain separation and padding
+        Sha3.shake_xof(ctx);
+        if(mode == 128) {
+            ctx.b[ctx.pt] ^= 0x04;
+            // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
+        } else {
+            ctx.b[ctx.pt] ^= 0x04;
+            // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
+        }
+        ctx.b[ctx.rsiz - 1] ^= 0x08;
         Sha3.sha3_keccakf(ctx);
-        return ctx.b;// FIXME: not properly implemented. see above coments.
+        // Squeeze out output
+        byte[] Z = new byte[L / 8];
+        Sha3.shake_out(ctx, Z, L / 8);
+        return Z;
     }
     public static void absorb(Sha3.sha3_ctx_t ctx, byte[] X) {
         while(X.length > 136) {
@@ -139,6 +172,30 @@ public class KMACXOF256 {
         xor(ctx.b, lastBlock);
         Sha3.sha3_keccakf(ctx);
     }
+    public byte[] symmetricEncrypt(byte[] m, String pw) {
+        // 1. generate random 512 bit value
+        byte[] z = randomBytes();
+
+        // 2. derive encryption and authentication keys
+        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
+        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
+
+        // split (Ke || Ka) into two 512 bits keys
+        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
+
+        // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
+        byte[] c = cSHAKE(256, ke, NUMBER_OF_BYTES, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
+        c = xor(c, m);
+
+        // t <- KMACXOF256(ka, m , 512, "SKA")
+        byte[] t = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+
+        // symmetric cyrptogram: (z, c, t)
+        byte[] symmetricCryptogram = appendBytes(z, appendBytes(c, t));
+        return symmetricCryptogram;
+    }
+
     /**
      * • X is the main input bit string. It may be of any length3, including zero.
      * • L is an integer representing the requested output length4 in bits.
@@ -195,5 +252,63 @@ public class KMACXOF256 {
 //            2. return cSHAKE256(newX, L, “KMAC”, S).
         var newX = appendBytes(bytepad(encode_string(K), 136), X, right_encode(0));
         return cSHAKE256(newX, L, "KMAC".getBytes(), S);
+
+        // Squeeze out output
+        byte[] Z = new byte[L / 8];
+        Sha3.shake_out(ctx, Z, L / 8);
+        return Z;// FIXME: not properly implemented. see above coments.
+    }
+
+    private byte[] randomBytes() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[NUMBER_OF_BYTES / 8]; // 8 bits = 1 byte
+        random.nextBytes(bytes);
+        return bytes;
+    }
+
+    public byte[] symmetricEncrypt(byte[] m, String pw) {
+        // 1. generate random 512 bit value
+        byte[] z = randomBytes();
+
+        // 2. derive encryption and authentication keys
+        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
+        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
+
+        // split (Ke || Ka) into two 512 bits keys
+        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
+
+        // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
+        byte[] c = cSHAKE(256, ke, NUMBER_OF_BYTES, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
+        c = xor(c, m);
+
+        // t <- KMACXOF256(ka, m , 512, "SKA")
+        byte[] t = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+
+        // symmetric cyrptogram: (z, c, t)
+        byte[] symmetricCryptogram = appendBytes(z, appendBytes(c, t));
+        return symmetricCryptogram;
+    }
+
+    public byte[] symmetricDecrypt(byte[] z, byte[] c, byte[] t, String pw) {
+        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
+        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
+
+        // split (ke || ka) into two 512-bit keys
+        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
+
+        // m <- KMACXOF256(ke, "", |c|, "SKE") xor c
+        byte[] m = cSHAKE(256, ke, c.length * 8, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
+        m = xor(m, c);
+
+        // tPrime <- KMACXOF256(ka, m, 512, "SKA")
+        byte[] tPrime = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+
+        if (Arrays.equals(tPrime, t)) {
+            return m;
+        } else {
+            throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
+        }
     }
 }
