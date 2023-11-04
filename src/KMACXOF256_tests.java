@@ -114,6 +114,10 @@ public class KMACXOF256_tests {
                 "1D FB 15 74 C8 FB 55 CB 45 DA 8E 25 AF B0 92 BB ";
         // translate the output into a string. compare with expected text.
         //Sha3.phex(out);
-        return Sha3.bytesToHex(out).equals(exp_text);
+        var res = Sha3.bytesToHex(out).equals(exp_text);
+        if(res) return true;
+        Sha3.phex(out);
+        System.out.println(exp_text);
+        return false;
     }
 }

@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 import static java.lang.Math.min;
 
 public class KMACXOF256 {
@@ -122,8 +124,20 @@ public class KMACXOF256 {
         Sha3.sha3_keccakf(ctx);
         return ctx.b;// FIXME: not properly implemented. see above coments.
     }
-    public static byte[] absorb(Sha3.sha3_ctx_t ctx, byte[] X) {
-        return ctx.b;
+    public static void absorb(Sha3.sha3_ctx_t ctx, byte[] X) {
+        while(X.length > 136) {
+            var d = Arrays.copyOfRange(X, 0, 136);
+            xor(ctx.b, d);
+            Sha3.sha3_keccakf(ctx);
+            X = Arrays.copyOfRange(X, 136, X.length);
+        }
+        var lastBlock = new byte[200];
+        xor(lastBlock, X); // copy remaining data.
+        // 0x04 for termination of data
+        lastBlock[X.length] ^= 0x04;
+        lastBlock[135] ^= 0x80; // 0x80 for reasons, denotes this is last block
+        xor(ctx.b, lastBlock);
+        Sha3.sha3_keccakf(ctx);
     }
     /**
      * • X is the main input bit string. It may be of any length3, including zero.
@@ -144,30 +158,14 @@ public class KMACXOF256 {
         Sha3.sha3_init(ctx, L);
         // rate(r) for cSHAKE256 is 136
         var bytepad_data = bytepad(appendBytes(encode_string(N), encode_string(S)), 136);
-        xor(ctx.b, bytepad_data);
-        Sha3.sha3_keccakf(ctx);
-
-        X = appendBytes(X, new byte[]{0x04});
-
-        xor(ctx.b, X);
-        ctx.b[135] ^= (byte) 0x80; // xof?
-        Sha3.sha3_keccakf(ctx);
-//      Sha3.shake_update(ctx, X, X.length); // XOF mode? absorb X in 136B chunks? append 0x04?
-        //Sha3.sha3_update(ctx, X, X.length);
+        absorb(ctx, appendBytes(bytepad_data, X)); // we handle the 00 aka 0x04 in absorb().
         return squeeze(ctx, L/8);
-//
-//        var out = new byte[L>>3];
-//        //Sha3.shake_out(ctx, out, L);
-//        Sha3.sha3_final(out, ctx);
-//        Sha3.phex(out);
-        //return ctx.b;
     }
     static byte[] squeeze(Sha3.sha3_ctx_t ctx, int output_length) {
-//        var ctx = new Sha3.sha3_ctx_t();
+        // very similar to Sha3.shake_out ?
         var rate = 136;
         var c = 1600/8 - rate; // n bits = r + c; c = n - r
         // state size n = r + c, or 200 bytes
-        //Sha3.sha3_update(ctx, input, input.length); // absorb?
 
         // squeeze?
         byte[] out = new byte[output_length];
