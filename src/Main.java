@@ -34,7 +34,7 @@ class Main {
         //Sha3.phex(KMACXOF256.left_encode(0xA8));
         System.out.printf("cSHAKE256 #3: %s\n", KMACXOF256_tests.cSHAKE256_test_Sample3());
         System.out.printf("cSHAKE256 #4: %s\n", KMACXOF256_tests.cSHAKE256_test_Sample4());
-/*
+
         //////////////////////////////////////////////////////
         // requirements:
         var emptystr = new byte[]{};
@@ -68,7 +68,7 @@ class Main {
         ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
 //▪ c <- KMACXOF256(ke, “”, |m|, “SKE”) xor m
         var c = KMACXOF256.xor(
-                    KMACXOF256.KMACXOF256(ke, emptystr, m.length, "SKE".getBytes()), m);
+                    KMACXOF256.KMACXOF256(ke, emptystr, m.length*8, "SKE".getBytes()), m);
 
 //▪ t <- KMACXOF256(ka, m, 512, “SKA”)
         t =  KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
@@ -90,19 +90,21 @@ class Main {
         ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
 //▪ m <- KMACXOF256(ke, “”, |c|, “SKE”)  c
         m = KMACXOF256.xor(
-                KMACXOF256.KMACXOF256(ke, emptystr, c.length, "SKE".getBytes()),
+                KMACXOF256.KMACXOF256(ke, emptystr, c.length*8, "SKE".getBytes()),
                 c);
 //▪ t_prime <- KMACXOF256(ka, m, 512, “SKA”)
         var t_prime = KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
 //▪ accept if, and only if, t_prime == t
         if (compare(t, t_prime) == 0) {
             //return decypted plaintext.
-            System.out.printf("Message recieved: %s", t);
+            System.out.print("Message recieved:");
+            for(byte b : m) System.out.printf("%c", b);
+            System.out.println();
         } else {
             System.out.println("Mismatch. Incorrect password.");
             // throw exception/error that password is incorrect.
         }
-    */
+
     }
 
 }
