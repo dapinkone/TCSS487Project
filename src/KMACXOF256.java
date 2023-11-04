@@ -6,7 +6,7 @@ import static java.lang.Math.min;
 
 public class KMACXOF256 {
 
-    public static final int NUMBER_OF_BYTES = 512; // 64 bytes = 512 bits
+    public static final int NUMBER_OF_BITS = 512; // 64 bytes = 512 bits
 
     // basic operations & functions from FIPS 202
     public static byte[] xor(byte[] X, byte[] Y) {
@@ -231,51 +231,59 @@ public class KMACXOF256 {
         return cSHAKE256(newX, L, "KMAC".getBytes(), S);
     }
 
-    private byte[] randomBytes() {
+    private static byte[] randomBytes() {
         SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[NUMBER_OF_BYTES / 8]; // 8 bits = 1 byte
+        byte[] bytes = new byte[NUMBER_OF_BITS / 8]; // 8 bits = 1 byte
         random.nextBytes(bytes);
         return bytes;
     }
 
-    public byte[] symmetricEncrypt(byte[] m, String pw) {
+    public static byte[] symmetricEncrypt(byte[] m, byte[] pw) {
         // 1. generate random 512 bit value
         byte[] z = randomBytes();
 
         // 2. derive encryption and authentication keys
-        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
-        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
-
+        byte[] zpw = appendBytes(z, pw);
+        //byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(), "S".getBytes());
+        byte[] ke_ka = KMACXOF256(
+                KMACXOF256.appendBytes(z, pw),
+                "".getBytes(),
+                1024,
+                "S".getBytes());
         // split (Ke || Ka) into two 512 bits keys
         byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
         byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
 
         // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
-        byte[] c = cSHAKE(256, ke, NUMBER_OF_BYTES, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
-        c = xor(c, m);
+        //byte[] c = cSHAKE(256, ke, NUMBER_OF_BITS, "".getBytes(), "SKE".getBytes());
+        byte[] c = KMACXOF256(ke, "".getBytes(), m.length*8, "SKE".getBytes());
+        xor(c, m);
 
         // t <- KMACXOF256(ka, m , 512, "SKA")
-        byte[] t = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+        //byte[] t = cSHAKE(256, ka, NUMBER_OF_BITS, m, "SKA".getBytes());
+        var t =  KMACXOF256(ka, m, NUMBER_OF_BITS, "SKA".getBytes());
 
         // symmetric cyrptogram: (z, c, t)
-        byte[] symmetricCryptogram = appendBytes(z, appendBytes(c, t));
+        byte[] symmetricCryptogram = appendBytes(z, c, t);
         return symmetricCryptogram;
     }
 
-    public byte[] symmetricDecrypt(byte[] z, byte[] c, byte[] t, String pw) {
-        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
-        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
+    public static byte[] symmetricDecrypt(byte[] zct, byte[] pw) {
+        byte[] z = Arrays.copyOfRange(zct, 0, 64); // first 512 bits
+        byte[] c = Arrays.copyOfRange(zct, 64, zct.length - 64); // middle portion
+        byte[] t = Arrays.copyOfRange(zct, zct.length - 64, zct.length); // last 512 bits
+
+        byte[] ke_ka = KMACXOF256(appendBytes(z, pw),"".getBytes(),1024,"S".getBytes());
 
         // split (ke || ka) into two 512-bit keys
         byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
-        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128); // NOTE: L is in bits. range is in bytes. 128*8 = 1024.
 
         // m <- KMACXOF256(ke, "", |c|, "SKE") xor c
-        byte[] m = cSHAKE(256, ke, c.length * 8, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
-        m = xor(m, c);
+        var m = xor(KMACXOF256(ke, "".getBytes(), c.length*8, "SKE".getBytes()), c);
 
         // tPrime <- KMACXOF256(ka, m, 512, "SKA")
-        byte[] tPrime = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
+        byte[] tPrime = KMACXOF256(ka, m, 512, "SKA".getBytes());
 
         if (Arrays.equals(tPrime, t)) {
             return m;

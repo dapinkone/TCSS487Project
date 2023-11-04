@@ -19,10 +19,41 @@ class Main {
     private static final int DEFAULT_MODE = 256;
     private static final int NUMBER_OF_BYTES = 512;
 
-    public static void main(String[] args) {
+    enum Mode {
+        HASH, TAG, ENCRYPT, DECRYPT
+    }
+
+    public static void main(String[] args) throws IOException {
         run_tests();
-        System.out.println("Welcome to the encryption");
-        while(true) {
+
+        Mode modeSelected = null;
+        String fin = null, fout = null, fpw = null; // file names
+        byte[] pw = null, m = null;
+        // parse mode flags
+        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
+            System.out.printf("unknown command %s", args[0]);
+        } else if(args.length > 0){
+            switch (args[0].toLowerCase().charAt(1)) {
+                case 'h' -> modeSelected = Mode.HASH;
+                case 't' -> modeSelected = Mode.TAG;
+                case 'e' -> modeSelected = Mode.ENCRYPT;
+                case 'd' -> modeSelected = Mode.DECRYPT;
+                default -> System.out.printf("Unknown flag: %s\n", args[0]);
+            }
+        }
+
+        // parse for input / output flags.
+        for (int ptr = 1; ptr < args.length - 2; ptr++) {
+            switch (args[ptr].toLowerCase()) {
+                case "-fin" -> fin = args[ptr + 1];   // input from file.
+                case "-fout" -> fout = args[ptr + 1]; // output to file.
+                case "-fpw" -> fpw = args[ptr + 1]; // password as file.
+                case "-pw" -> pw = args[ptr + 1].getBytes(); // password as text.
+            }
+        }
+        // if no commandline mode given, present menus:
+        while (modeSelected == null) {
+            System.out.println("Welcome to the encryption");
             System.out.println("\nPlease choose a number below:");
             System.out.println("1. Compute a cryptographic hash of a file");
             System.out.println("2. Compute a cryptographic hash of text");
@@ -37,47 +68,83 @@ class Main {
             int choice = scanner.nextInt();
             scanner.nextLine();
 
-            switch(choice) {
-                case 1:
-                    hashFile();
-                    break;
-
-                case 2:
-                    //hashText();
-                    break;
-
-                case 3:
-                    macOfFile();
-                    break;
-
-                case 4:
-                    //tagOfText();
-                    break;
-
-                case 5:
-                    encryptFile();
-                    break;
-
-                case 6:
-                    decryptFile();
-                    break;
-
-                case 7:
+            switch (choice) {
+                case 1 -> {//hashFile();
+                    modeSelected = Mode.HASH;
+                    fin = prompt("file input:");// collect filename for fin.
+                }
+                case 2 -> {
+                    modeSelected = Mode.HASH;
+                    // collect text from STDIN
+                }
+                //hashText();
+                case 3 -> {
+                    modeSelected = Mode.TAG;
+                    fin = prompt("file input:");
+                    //macOfFile();
+                }
+                case 4 -> {
+                    modeSelected = Mode.TAG;
+                    // collect text from STDIN
+                }
+                //tagOfText();
+                case 5 -> {
+                    modeSelected = Mode.ENCRYPT;
+                    fin = prompt("file input:");
+                    pw = prompt("password:").getBytes();// collect pw
+                }
+                case 6 -> {
+                    modeSelected = Mode.DECRYPT;
+                    fin = prompt("file input:");
+                    pw = prompt("password:").getBytes();// collect pw
+                }
+                case 7 -> {
                     System.out.println("Exiting Encryption");
                     System.exit(0);
+                }
+                default ->
+                        System.out.println("Invalid option. Please try again");
+            }
+            // collect necessary data from files (fin, fpw)
+            if(fpw != null && pw == null) // password file provided
+                pw = readFile(fpw);
+            if(fin != null) m = readFile(fin);
+            else m = prompt("Input file data: ").getBytes();
 
-                default:
-                    System.out.println("Invalid option. Please try again");
+            var out = switch(Objects.requireNonNull(modeSelected)) {
+                case HASH -> KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());// hash(m);
+                case TAG -> KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes()); // tag(m, pw);
+                case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
+                case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
+            };
+
+            // results/output has been gathered, put said results where requested.
+            if(fout != null) {
+                System.out.println("writing data to " + fout);
+                    // write out to fout.
+                writeFile(fout, out);
+            } else { // write out to STDOUT.
+                for(byte b : out) {
+                    System.out.print(b);
+                }
+                System.out.println();
             }
         }
-        // User enters pass phrase
-        // User enters a file
 
-        // encrypt
-
-        // decrypt
     }
 
+    private static String prompt(String s) {
+        System.out.print(s);
+        return scanner.nextLine();
+    }
+    private static byte[] readFile(String filePath) throws IOException {
+        try {
+            return Files.readAllBytes(Paths.get(filePath));
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+            throw e;
+        }
+    }
     private static void hashFile() {
         System.out.print("Enter the file path to hash: ");
         String filePath = scanner.nextLine();
@@ -111,21 +178,21 @@ class Main {
             System.out.println("Error reading file: " + e.getMessage());
         }
     }
-
-    private static void encryptFile() {
-        System.out.print("Enter the file path to encrypt: ");
-        String filePath = scanner.nextLine();
-        System.out.print("Enter the passphrase: ");
-        String passphrase = scanner.nextLine();
+    private static void writeFile(String fout, byte[] data) {
         try {
-            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-            byte[] encryptedData = kmacxof256.symmetricEncrypt(fileData, passphrase);
-            Path encryptedFilePath = Paths.get(filePath + ".encrypted");
-            Files.write(encryptedFilePath, encryptedData);
-            System.out.println("Encrypted file created: " + encryptedFilePath);
+            Path filePath = Paths.get(fout);
+            Files.write(filePath, data);
         } catch (IOException e) {
-            System.out.println("Error encrypting file: " + e.getMessage());
+            System.out.println("Error writing file: " + e.getMessage());
         }
+    }
+    private static byte[] encrypt(byte[] fileData /* m */, byte[] passphrase) {
+//        System.out.print("Enter the file path to encrypt: ");
+//        String filePath = scanner.nextLine();
+//        System.out.print("Enter the passphrase: ");
+//        String passphrase = scanner.nextLine();
+            //byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+            return kmacxof256.symmetricEncrypt(fileData, passphrase);
     }
 
     private static void decryptFile() {
@@ -136,10 +203,10 @@ class Main {
         try {
             byte[] encryptedData = Files.readAllBytes(Paths.get(filePath));
             // Assuming the encrypted file structure is: z || c || t
-            byte[] z = Arrays.copyOfRange(encryptedData, 0, 64); // first 512 bits
-            byte[] c = Arrays.copyOfRange(encryptedData, 64, encryptedData.length - 64); // middle portion
-            byte[] t = Arrays.copyOfRange(encryptedData, encryptedData.length - 64, encryptedData.length); // last 512 bits
-            byte[] decryptedData = kmacxof256.symmetricDecrypt(z, c, t, passphrase);
+//            byte[] z = Arrays.copyOfRange(encryptedData, 0, 64); // first 512 bits
+//            byte[] c = Arrays.copyOfRange(encryptedData, 64, encryptedData.length - 64); // middle portion
+//            byte[] t = Arrays.copyOfRange(encryptedData, encryptedData.length - 64, encryptedData.length); // last 512 bits
+            byte[] decryptedData = KMACXOF256.symmetricDecrypt(encryptedData, passphrase.getBytes());
             Path decryptedFilePath = Paths.get(filePath + ".decrypted");
             Files.write(decryptedFilePath, decryptedData);
             System.out.println("Decrypted file created: " + decryptedFilePath);
@@ -350,10 +417,6 @@ class Main {
             System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
         //test_speed();
 
-        //return 0;
-
-//        System.out.println("test_left_encode:");
-//        System.out.println(KMACXOF256_tests.test_left_encode());
         System.out.printf("sha3 words test: %s\n", Sha3_tests.words_test());
         // Collect plaintext bytes from whatever source necessary.
 //        var res =
@@ -376,19 +439,22 @@ class Main {
 //Computing a cryptographic hash h of a byte array m:
 //▪ h <- KMACXOF256(“”, m, 512, “D”)
         var h = KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());
-        System.out.print("Hash:"); Sha3.phex(h);
+        System.out.print("Hash:");
+        Sha3.phex(h);
         //-----
 //• Compute an authentication tag t of a byte array m under passphrase pw:
 //▪ t <- KMACXOF256(pw, m, 512, “T”)
         var t = KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes());
-        System.out.print("Tag:");Sha3.phex(t);
+        System.out.print("Tag:");
+        Sha3.phex(t);
         //------
 
 //• Encrypting a byte array m symmetrically under passphrase pw:
 //▪ z <- Random(512)
+        /*
         var z = new byte[64]; // 64B = 512b
         new SecureRandom().nextBytes(z);
-//▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
+        //▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
         byte[] ke, ka;
         var kz = KMACXOF256.KMACXOF256(
                 KMACXOF256.appendBytes(z, pw),
@@ -398,44 +464,54 @@ class Main {
         // split (ke || ka) <- kz
         ke = Arrays.copyOfRange(kz, 0, kz.length/2);
         ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
-//▪ c <- KMACXOF256(ke, “”, |m|, “SKE”) xor m
+        //▪ c <- KMACXOF256(ke, “”, |m|, “SKE”) xor m
         var c = KMACXOF256.xor(
                     KMACXOF256.KMACXOF256(ke, emptystr, m.length*8, "SKE".getBytes()), m);
 
-//▪ t <- KMACXOF256(ka, m, 512, “SKA”)
+        //▪ t <- KMACXOF256(ka, m, 512, “SKA”)
         t =  KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
-//▪ symmetric cryptogram: (z, c, t)
+        //▪ symmetric cryptogram: (z, c, t)
         // return cryptogram? what format is (z, c, t)? z || c || t .
         System.out.printf("cryptogram:"); Sha3.phex(KMACXOF256.appendBytes(z, c, t));
+         */
+        var zct = KMACXOF256.symmetricEncrypt(m, pw);
 //---------
 
 //• Decrypting a symmetric cryptogram (z, c, t) under passphrase pw:
+        var decrypted = KMACXOF256.symmetricDecrypt(zct, pw);
+        for (byte b : decrypted)
+            System.out.printf("%c", b);
+        System.out.println();
+        System.out.printf("Decryption test: %s\n", Arrays.equals(decrypted, m));
         // acquire z || c || t from file.
-//▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
-        kz = KMACXOF256.KMACXOF256(
-                KMACXOF256.appendBytes(z, pw),
-                emptystr,
-                1024,
-                "S".getBytes());
-        // split (ke || ka) <- kz
-        ke = Arrays.copyOfRange(kz, 0, kz.length/2);
-        ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
-//▪ m <- KMACXOF256(ke, “”, |c|, “SKE”)  c
-        m = KMACXOF256.xor(
-                KMACXOF256.KMACXOF256(ke, emptystr, c.length*8, "SKE".getBytes()),
-                c);
-//▪ t_prime <- KMACXOF256(ka, m, 512, “SKA”)
-        var t_prime = KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
-//▪ accept if, and only if, t_prime == t
-        if (compare(t, t_prime) == 0) {
-            //return decypted plaintext.
-            System.out.print("Message recieved:");
-            for(byte b : m) System.out.printf("%c", b);
-            System.out.println();
-        } else {
-            System.out.println("Mismatch. Incorrect password.");
-            // throw exception/error that password is incorrect.
-        }
+//        var z = Arrays.copyOfRange(zct, 0, 64);
+//        var c = Arrays.copyOfRange(zct, 64, zct.length - 64);
+//        t = Arrays.copyOfRange(zct, zct.length - 64, zct.length);
+////▪ (ke || ka) <- KMACXOF256(z || pw, “”, 1024, “S”)
+//        var kz = KMACXOF256.KMACXOF256(
+//                KMACXOF256.appendBytes(z, pw),
+//                emptystr,
+//                1024,
+//                "S".getBytes());
+//        // split (ke || ka) <- kz
+//        var ke = Arrays.copyOfRange(kz, 0, kz.length/2);
+//        var ka = Arrays.copyOfRange(kz, kz.length/2, kz.length);
+////▪ m <- KMACXOF256(ke, “”, |c|, “SKE”)  c
+//        m = KMACXOF256.xor(
+//                KMACXOF256.KMACXOF256(ke, emptystr, c.length*8, "SKE".getBytes()),
+//                c);
+////▪ t_prime <- KMACXOF256(ka, m, 512, “SKA”)
+//        var t_prime = KMACXOF256.KMACXOF256(ka, m, 512, "SKA".getBytes());
+////▪ accept if, and only if, t_prime == t
+//        if (compare(t, t_prime) == 0) {
+//            //return decypted plaintext.
+//            System.out.print("Message recieved:");
+//            for(byte b : m) System.out.printf("%c", b);
+//            System.out.println();
+//        } else {
+//            System.out.println("Mismatch. Incorrect password.");
+//            // throw exception/error that password is incorrect.
+//        }
 
     }
 
