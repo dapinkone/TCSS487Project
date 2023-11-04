@@ -227,7 +227,8 @@ class Main {
 //                "".getBytes());
         //Sha3.phex(res);
         //Sha3.phex(KMACXOF256.left_encode(0xA8));
-        System.out.printf("cSHAKE256 #3: %s", KMACXOF256_tests.cSHAKE256_test_Sample3());
+        System.out.printf("cSHAKE256 #3: %s\n", KMACXOF256_tests.cSHAKE256_test_Sample3());
+        System.out.printf("cSHAKE256 #4: %s\n", KMACXOF256_tests.cSHAKE256_test_Sample4());
 /*
         //////////////////////////////////////////////////////
         // requirements:
