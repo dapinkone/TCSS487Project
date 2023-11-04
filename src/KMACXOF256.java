@@ -71,7 +71,7 @@ public class KMACXOF256 {
      * @param w encoding factor (the output length must be a multiple of w)
      * @return byte-padded byte array X with encoding factor w.
      */
-    public byte[] bytepad(byte[] /* bitstring? */ X, int w) {
+    public static byte[] bytepad(byte[] /* bitstring? */ X, int w) {
         // The bytepad(X, w) function prepends an encoding of the integer w to an input string X, then pads
         //the result with zeros until it is a byte string whose length in bytes is a multiple of w. In general,
         //bytepad is intended to be used on encoded strings—the byte string bytepad(encode_string(S), w)
@@ -172,29 +172,6 @@ public class KMACXOF256 {
         xor(ctx.b, lastBlock);
         Sha3.sha3_keccakf(ctx);
     }
-    public byte[] symmetricEncrypt(byte[] m, String pw) {
-        // 1. generate random 512 bit value
-        byte[] z = randomBytes();
-
-        // 2. derive encryption and authentication keys
-        byte[] zpw = appendBytes(z, pw.getBytes(StandardCharsets.UTF_8));
-        byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(StandardCharsets.UTF_8), "S".getBytes(StandardCharsets.UTF_8));
-
-        // split (Ke || Ka) into two 512 bits keys
-        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
-        byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
-
-        // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
-        byte[] c = cSHAKE(256, ke, NUMBER_OF_BYTES, "".getBytes(StandardCharsets.UTF_8), "SKE".getBytes(StandardCharsets.UTF_8));
-        c = xor(c, m);
-
-        // t <- KMACXOF256(ka, m , 512, "SKA")
-        byte[] t = cSHAKE(256, ka, NUMBER_OF_BYTES, m, "SKA".getBytes(StandardCharsets.UTF_8));
-
-        // symmetric cyrptogram: (z, c, t)
-        byte[] symmetricCryptogram = appendBytes(z, appendBytes(c, t));
-        return symmetricCryptogram;
-    }
 
     /**
      * • X is the main input bit string. It may be of any length3, including zero.
@@ -252,11 +229,6 @@ public class KMACXOF256 {
 //            2. return cSHAKE256(newX, L, “KMAC”, S).
         var newX = appendBytes(bytepad(encode_string(K), 136), X, right_encode(0));
         return cSHAKE256(newX, L, "KMAC".getBytes(), S);
-
-        // Squeeze out output
-        byte[] Z = new byte[L / 8];
-        Sha3.shake_out(ctx, Z, L / 8);
-        return Z;// FIXME: not properly implemented. see above coments.
     }
 
     private byte[] randomBytes() {

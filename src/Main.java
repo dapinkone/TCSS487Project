@@ -15,23 +15,12 @@ import static java.util.Arrays.compare;
 class Main {
 
     private static final Scanner scanner = new Scanner(System.in);
-    private static KMACXOF256 kmacxof256 = new KMACXOF256();
+    private static final KMACXOF256 kmacxof256 = new KMACXOF256();
     private static final int DEFAULT_MODE = 256;
     private static final int NUMBER_OF_BYTES = 512;
 
-    public static void main(String args[]) {
-        if (test_sha3() == 0 && test_shake() == 0)
-            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
-        //test_speed();
-
-        //return 0;
-
-        System.out.println("testenc:");
-        System.out.println(KMACXOF256_tests.tstenc8());
-        System.out.println("test_left_encode:");
-        System.out.println(KMACXOF256_tests.test_left_encode());
-        System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
-
+    public static void main(String[] args) {
+        run_tests();
         System.out.println("Welcome to the encryption");
         while(true) {
             System.out.println("\nPlease choose a number below:");
@@ -54,7 +43,7 @@ class Main {
                     break;
 
                 case 2:
-                    hashText();
+                    //hashText();
                     break;
 
                 case 3:
@@ -62,7 +51,7 @@ class Main {
                     break;
 
                 case 4:
-                    tagOfText();
+                    //tagOfText();
                     break;
 
                 case 5:
@@ -356,7 +345,7 @@ class Main {
 
     }*/
     // main
-    public static void main(String args[]) {
+    public static void run_tests() {
         if (Sha3_tests.test_sha3() == 0 && Sha3_tests.test_shake() == 0)
             System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
         //test_speed();

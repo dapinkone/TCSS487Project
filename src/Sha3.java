@@ -257,9 +257,9 @@ public class Sha3 {
         c.pt = j;
     }
 
-    // static void shake_update(sha3_ctx_t c, byte[] data, long len) {
-    //     sha3_update(c, data, len);
-    // }
+    static void shake_update(sha3_ctx_t c, byte[] data, long len) {
+         sha3_update(c, data, len);
+     }
 
 // finalize and output a hash
 
