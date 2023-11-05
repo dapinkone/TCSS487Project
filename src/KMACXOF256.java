@@ -1,4 +1,3 @@
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -47,12 +46,13 @@ public class KMACXOF256 {
     public static byte[] appendBytes(byte[]... Xs) {
         // count up the lengths to determine how long the new array is.
         int newlen = 0;
-        for (var x : Xs) newlen += x.length;
+        for (var x : Xs) newlen += (x != null) ? x.length : 0;
 
         byte[] newXs = new byte[newlen];
         int ptr = 0; // keep track of where we are in newXs while copying.
         for (byte[] x : Xs) {
             // copy each array from Xs into newXs.
+            if(x == null) continue;
             System.arraycopy(x, 0, newXs, ptr, x.length);
             ptr += x.length;
         }
@@ -92,71 +92,71 @@ public class KMACXOF256 {
         }
         return z;
     }
-    public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
-        /*
-         - X is the main input bit string. It may be of any length3, including zero.
-         - L is an integer representing the requested output length4 in bits.
-         - N is a function-name bit string, used by NIST to define functions based on cSHAKE.
-         When no function other than cSHAKE is desired, N is set to the empty string.
-         - S is a customization bit string. The user selects this string to define a variant of the
-         function. When no customization is desired, S is set to the empty string5.
-
-         An implementation of cSHAKE may reasonably support only input strings and output lengths
-         that are whole bytes; if so, a fractional-byte input string or a request for an output length that is
-         not a multiple of 8 would result in an error.
-         */
-        if(L % 8 != 0) throw new IllegalArgumentException("Only whole bytes are supported.");
-        if(L == 0) return new byte[0];
-
-
-        // Check if N and S are empty; default to SHAKE128 and SHAKE256
-        if (N.length == 0 && S.length == 0) {
-            Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
-            if (mode == 128 ) {
-                Sha3.shake128_init(ctx);
-            } else {
-                Sha3.shake256_init(ctx);
-            }
-            Sha3.sha3_update(ctx, X, X.length);
-            Sha3.shake_xof(ctx);
-            byte[] Z = new byte[L / 8];
-            Sha3.shake_out(ctx, Z, L / 8);
-            return Z;
-        }
-
-        byte[] encodedN = encode_string(N);
-        byte[] encodedS = encode_string(S);
-
-        byte[] bytePadded = bytepad(appendBytes(encodedN, encodedS), mode == 128 ? 168 : 136);
-        // byte[] newX = appendBytes(bytePadded, X);
-        // newX = appendBytes(newX, new byte[]{0});
-
-        // initialize content
-        Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
-        Sha3.sha3_init(ctx, mode == 128 ? 16 : 32);
-
-        // absorb byte-padded N and S
-        Sha3.sha3_update(ctx, bytePadded, bytePadded.length);
-
-        // absorb the input X
-        Sha3.sha3_update(ctx, X, X.length);
-
-        // Apply domain separation and padding
-        Sha3.shake_xof(ctx);
-        if(mode == 128) {
-            ctx.b[ctx.pt] ^= 0x04;
-            // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
-        } else {
-            ctx.b[ctx.pt] ^= 0x04;
-            // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
-        }
-        ctx.b[ctx.rsiz - 1] ^= 0x08;
-        Sha3.sha3_keccakf(ctx);
-        // Squeeze out output
-        byte[] Z = new byte[L / 8];
-        Sha3.shake_out(ctx, Z, L / 8);
-        return Z;
-    }
+//    public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
+//        /*
+//         - X is the main input bit string. It may be of any length3, including zero.
+//         - L is an integer representing the requested output length4 in bits.
+//         - N is a function-name bit string, used by NIST to define functions based on cSHAKE.
+//         When no function other than cSHAKE is desired, N is set to the empty string.
+//         - S is a customization bit string. The user selects this string to define a variant of the
+//         function. When no customization is desired, S is set to the empty string5.
+//
+//         An implementation of cSHAKE may reasonably support only input strings and output lengths
+//         that are whole bytes; if so, a fractional-byte input string or a request for an output length that is
+//         not a multiple of 8 would result in an error.
+//         */
+//        if(L % 8 != 0) throw new IllegalArgumentException("Only whole bytes are supported.");
+//        if(L == 0) return new byte[0];
+//
+//
+//        // Check if N and S are empty; default to SHAKE128 and SHAKE256
+//        if (N.length == 0 && S.length == 0) {
+//            Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
+//            if (mode == 128 ) {
+//                Sha3.shake128_init(ctx);
+//            } else {
+//                Sha3.shake256_init(ctx);
+//            }
+//            Sha3.sha3_update(ctx, X, X.length);
+//            Sha3.shake_xof(ctx);
+//            byte[] Z = new byte[L / 8];
+//            Sha3.shake_out(ctx, Z, L / 8);
+//            return Z;
+//        }
+//
+//        byte[] encodedN = encode_string(N);
+//        byte[] encodedS = encode_string(S);
+//
+//        byte[] bytePadded = bytepad(appendBytes(encodedN, encodedS), mode == 128 ? 168 : 136);
+//        // byte[] newX = appendBytes(bytePadded, X);
+//        // newX = appendBytes(newX, new byte[]{0});
+//
+//        // initialize content
+//        Sha3.sha3_ctx_t ctx = new Sha3.sha3_ctx_t();
+//        Sha3.sha3_init(ctx, mode == 128 ? 16 : 32);
+//
+//        // absorb byte-padded N and S
+//        Sha3.sha3_update(ctx, bytePadded, bytePadded.length);
+//
+//        // absorb the input X
+//        Sha3.sha3_update(ctx, X, X.length);
+//
+//        // Apply domain separation and padding
+//        Sha3.shake_xof(ctx);
+//        if(mode == 128) {
+//            ctx.b[ctx.pt] ^= 0x04;
+//            // return keccak256(bytepad(encode_string(N) || encode_string(S), 168) || X || 00, L)
+//        } else {
+//            ctx.b[ctx.pt] ^= 0x04;
+//            // return // keccak512(bytepad(encode_string(N) || encode_string(S), 136) || X || 00, L)
+//        }
+//        ctx.b[ctx.rsiz - 1] ^= 0x08;
+//        Sha3.sha3_keccakf(ctx);
+//        // Squeeze out output
+//        byte[] Z = new byte[L / 8];
+//        Sha3.shake_out(ctx, Z, L / 8);
+//        return Z;
+//    }
     public static void absorb(Sha3.sha3_ctx_t ctx, byte[] X) {
         while(X.length > 136) {
             var d = Arrays.copyOfRange(X, 0, 136);
@@ -243,8 +243,6 @@ public class KMACXOF256 {
         byte[] z = randomBytes();
 
         // 2. derive encryption and authentication keys
-        byte[] zpw = appendBytes(z, pw);
-        //byte[] ke_ka = cSHAKE(256, zpw, 1024, "".getBytes(), "S".getBytes());
         byte[] ke_ka = KMACXOF256(
                 KMACXOF256.appendBytes(z, pw),
                 "".getBytes(),
@@ -255,12 +253,10 @@ public class KMACXOF256 {
         byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
 
         // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
-        //byte[] c = cSHAKE(256, ke, NUMBER_OF_BITS, "".getBytes(), "SKE".getBytes());
         byte[] c = KMACXOF256(ke, "".getBytes(), m.length*8, "SKE".getBytes());
         xor(c, m);
 
         // t <- KMACXOF256(ka, m , 512, "SKA")
-        //byte[] t = cSHAKE(256, ka, NUMBER_OF_BITS, m, "SKA".getBytes());
         var t =  KMACXOF256(ka, m, NUMBER_OF_BITS, "SKA".getBytes());
 
         // symmetric cyrptogram: (z, c, t)

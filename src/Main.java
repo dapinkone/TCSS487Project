@@ -24,7 +24,7 @@ class Main {
     }
 
     public static void main(String[] args) throws IOException {
-        run_tests();
+        //run_tests();
 
         Mode modeSelected = null;
         String fin = null, fout = null, fpw = null; // file names
@@ -105,6 +105,7 @@ class Main {
                 default ->
                         System.out.println("Invalid option. Please try again");
             }
+        }
             // collect necessary data from files (fin, fpw)
             if(fpw != null && pw == null) // password file provided
                 pw = readFile(fpw);
@@ -117,20 +118,15 @@ class Main {
                 case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
                 case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
             };
-
+            Sha3.phex(out);
             // results/output has been gathered, put said results where requested.
             if(fout != null) {
                 System.out.println("writing data to " + fout);
                     // write out to fout.
                 writeFile(fout, out);
-            } else { // write out to STDOUT.
-                for(byte b : out) {
-                    System.out.print(b);
-                }
-                System.out.println();
+            } else {
+                Sha3.phex(out); // not printable?
             }
-        }
-
     }
 
     private static String prompt(String s) {
@@ -139,23 +135,24 @@ class Main {
     }
     private static byte[] readFile(String filePath) throws IOException {
         try {
+            System.out.println("Reading data from file: " + filePath);
             return Files.readAllBytes(Paths.get(filePath));
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
             throw e;
         }
     }
-    private static void hashFile() {
-        System.out.print("Enter the file path to hash: ");
-        String filePath = scanner.nextLine();
-        try {
-            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-            byte[] hash = kmacxof256.cSHAKE(DEFAULT_MODE, fileData, NUMBER_OF_BYTES, new byte[0], new byte[0]);
-            System.out.println("Hash: " + bytesToHex(hash));
-        } catch (IOException e) {
-            System.out.println("Error reading file: " + e.getMessage());
-        }
-    }
+//    private static void hashFile() {
+//        System.out.print("Enter the file path to hash: ");
+//        String filePath = scanner.nextLine();
+//        try {
+//            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+//            byte[] hash = kmacxof256.cSHAKE(DEFAULT_MODE, fileData, NUMBER_OF_BYTES, new byte[0], new byte[0]);
+//            System.out.println("Hash: " + bytesToHex(hash));
+//        } catch (IOException e) {
+//            System.out.println("Error reading file: " + e.getMessage());
+//        }
+//    }
 
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
@@ -165,19 +162,19 @@ class Main {
         return sb.toString();
     }
 
-    private static void macOfFile() {
-        System.out.print("Enter the file path for MAC computation: ");
-        String filePath = scanner.nextLine();
-        System.out.print("Enter the passphrase: ");
-        String passphrase = scanner.nextLine();
-        try {
-            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-            byte[] mac = kmacxof256.cSHAKE(256, fileData, 512, passphrase.getBytes(), "MAC".getBytes());
-            System.out.println("MAC: " + bytesToHex(mac));
-        } catch (IOException e) {
-            System.out.println("Error reading file: " + e.getMessage());
-        }
-    }
+//    private static void macOfFile() {
+//        System.out.print("Enter the file path for MAC computation: ");
+//        String filePath = scanner.nextLine();
+//        System.out.print("Enter the passphrase: ");
+//        String passphrase = scanner.nextLine();
+//        try {
+//            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+//            byte[] mac = kmacxof256.cSHAKE(256, fileData, 512, passphrase.getBytes(), "MAC".getBytes());
+//            System.out.println("MAC: " + bytesToHex(mac));
+//        } catch (IOException e) {
+//            System.out.println("Error reading file: " + e.getMessage());
+//        }
+//    }
     private static void writeFile(String fout, byte[] data) {
         try {
             Path filePath = Paths.get(fout);
@@ -186,36 +183,36 @@ class Main {
             System.out.println("Error writing file: " + e.getMessage());
         }
     }
-    private static byte[] encrypt(byte[] fileData /* m */, byte[] passphrase) {
-//        System.out.print("Enter the file path to encrypt: ");
+//    private static byte[] encrypt(byte[] fileData /* m */, byte[] passphrase) {
+////        System.out.print("Enter the file path to encrypt: ");
+////        String filePath = scanner.nextLine();
+////        System.out.print("Enter the passphrase: ");
+////        String passphrase = scanner.nextLine();
+//            //byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+//            return KMACXOF256.symmetricEncrypt(fileData, passphrase);
+//    }
+
+//    private static void decryptFile() {
+//        System.out.print("Enter the encrypted file path to decrypt: ");
 //        String filePath = scanner.nextLine();
 //        System.out.print("Enter the passphrase: ");
 //        String passphrase = scanner.nextLine();
-            //byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-            return kmacxof256.symmetricEncrypt(fileData, passphrase);
-    }
-
-    private static void decryptFile() {
-        System.out.print("Enter the encrypted file path to decrypt: ");
-        String filePath = scanner.nextLine();
-        System.out.print("Enter the passphrase: ");
-        String passphrase = scanner.nextLine();
-        try {
-            byte[] encryptedData = Files.readAllBytes(Paths.get(filePath));
-            // Assuming the encrypted file structure is: z || c || t
-//            byte[] z = Arrays.copyOfRange(encryptedData, 0, 64); // first 512 bits
-//            byte[] c = Arrays.copyOfRange(encryptedData, 64, encryptedData.length - 64); // middle portion
-//            byte[] t = Arrays.copyOfRange(encryptedData, encryptedData.length - 64, encryptedData.length); // last 512 bits
-            byte[] decryptedData = KMACXOF256.symmetricDecrypt(encryptedData, passphrase.getBytes());
-            Path decryptedFilePath = Paths.get(filePath + ".decrypted");
-            Files.write(decryptedFilePath, decryptedData);
-            System.out.println("Decrypted file created: " + decryptedFilePath);
-        } catch (IOException e) {
-            System.out.println("Error decrypting file: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            System.out.println("Decryption failed: " + e.getMessage());
-        }
-    }
+//        try {
+//            byte[] encryptedData = Files.readAllBytes(Paths.get(filePath));
+//            // Assuming the encrypted file structure is: z || c || t
+////            byte[] z = Arrays.copyOfRange(encryptedData, 0, 64); // first 512 bits
+////            byte[] c = Arrays.copyOfRange(encryptedData, 64, encryptedData.length - 64); // middle portion
+////            byte[] t = Arrays.copyOfRange(encryptedData, encryptedData.length - 64, encryptedData.length); // last 512 bits
+//            byte[] decryptedData = KMACXOF256.symmetricDecrypt(encryptedData, passphrase.getBytes());
+//            Path decryptedFilePath = Paths.get(filePath + ".decrypted");
+//            Files.write(decryptedFilePath, decryptedData);
+//            System.out.println("Decrypted file created: " + decryptedFilePath);
+//        } catch (IOException e) {
+//            System.out.println("Error decrypting file: " + e.getMessage());
+//        } catch (IllegalArgumentException e) {
+//            System.out.println("Decryption failed: " + e.getMessage());
+//        }
+//    }
     static int test_hexdigit(char ch) {
         if (ch >= '0' && ch <= '9')
             return ch - '0';
