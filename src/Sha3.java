@@ -11,19 +11,13 @@ import java.nio.ByteOrder;
 public class Sha3 {
     // TODO: these are all static methods. sha_ctx could be tied to the sha3 object, and save on arguments & complexity.
 
-//#ifndef SHA3_H
-//#define SHA3_H
-//
-//#include <stddef.h>
-//#include <stdint.h>
 
-    //#ifndef KECCAKF_ROUNDS
-//#define KECCAKF_ROUNDS 24
+
     public static int KECCAKF_ROUNDS = 24;
     public static final long BYTE_MASK = 0xFF;
 //            #endif
 
-    //#ifndef ROTL64
+
 //#define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 // In java, use Long.rotateLeft() instead.
     static long ROTL64(long x, long y) {

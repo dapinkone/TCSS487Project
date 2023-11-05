@@ -64,14 +64,18 @@ public class KMACXOF256 {
         System.arraycopy(B, 0, ret, A.length, B.length);
         return ret;
     }
+    /**
+     * Return left_encode(len(S)) || S.
+     * if the bit string S is not byte-oriented (i.e., len(S) is not a multiple of 8), the bit string
+     * returned from encode_string(S) is also not byte-oriented. However, if len(S) is a multiple of 8,
+     * then the length of the output of encode_string(S) will also be a multiple of 8
+     * @param S
+     * @return
+     */
     public byte[] encode_string(byte[] S) {
 //        The encode_string function is used to encode bit strings in a way that may be parsed
 //        unambiguously from the beginning of the string, S. The function is defined as follows:
-        // Return left_encode(len(S)) || S.
         // TODO: possible refactor for bitwise implementation of || operator?
-        // TODO: if the bit string S is not byte-oriented (i.e., len(S) is not a multiple of 8), the bit string
-        //returned from encode_string(S) is also not byte-oriented. However, if len(S) is a multiple of 8,
-        //then the length of the output of encode_string(S) will also be a multiple of 8
         return appendBytes(left_encode(S.length*8), S);
     }
     /**
@@ -195,7 +199,7 @@ public class KMACXOF256 {
         // Squeeze out output
         byte[] Z = new byte[L / 8];
         Sha3.shake_out(ctx, Z, L / 8);
-        return Z;// FIXME: not properly implemented. see above coments.
+        return Z;
     }
 
     private byte[] randomBytes() {

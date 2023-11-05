@@ -1,3 +1,4 @@
+
 public class Sha3_tests {
     public static boolean words_test() {
         var ctx = new Sha3.sha3_ctx_t();
@@ -45,4 +46,20 @@ public class Sha3_tests {
         }
         return true;
     }
+
+    @Test
+    public void testEncode() {
+        String plainText = "Email Signature";
+        byte[] expectedEncodedText = new byte[]{
+                (byte) 0x01, (byte) 0x78, (byte) 0x45, (byte) 0x6D,
+                (byte) 0x61, (byte) 0x69, (byte) 0x6C, (byte) 0x20,
+                (byte) 0x53, (byte) 0x69, (byte) 0x67, (byte) 0x6E,
+                (byte) 0x61, (byte) 0x74, (byte) 0x75, (byte) 0x72,
+                (byte) 0x65};
+
+        System.out.println("PlainText length" + plainText.length);
+        System.out.println("ExpectedEncodedText bit length" + expectedEncodedText.length);
+    }
+
+
 }

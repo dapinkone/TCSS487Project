@@ -2,6 +2,7 @@
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,7 +28,8 @@ class Main {
         System.out.println(KMACXOF256_tests.test_left_encode());
         System.out.printf("sha3 words: %s\n", Sha3_tests.words_test());
 
-        System.out.println("Welcome to the encryption");
+        instruction();
+
         while(true) {
             System.out.println("\nPlease choose a number below:");
             System.out.println("1. Compute a cryptographic hash of a file");
@@ -57,7 +59,7 @@ class Main {
                     break;
 
                 case 4:
-                    tagOfText();
+                    macOfText();
                     break;
 
                 case 5:
@@ -84,6 +86,18 @@ class Main {
         // decrypt
     }
 
+    public static void instruction() {
+        System.out.println("Welcome to the encryption");
+        System.out.println("Remember the following instruction to encrypt and decrypt a file or text");
+        System.out.println("Anyone with a file or a text can compute the hash and \n");
+        System.out.println("compare it to a known hash to verify that the file has not been altered.");
+        System.out.println("We have other functions in addition to encrypting and decrypting a text, and I will tell you when to use them");
+        System.out.println("\nEncryption\n Input: text or file to encrypt + a passphrase.");
+        System.out.println("Make sure to keep the passphrase secret between you and your intended sender. You will need the same passphrase");
+        System.out.println("During the encryption process, an authentication tag is also generated. You may want to store this somewhere");
+        System.out.println("When you decrypt a message, you will be comparing the authentication tag that you generated with the expected tag.");
+
+    }
     private static void hashFile() {
         System.out.print("Enter the file path to hash: ");
         String filePath = scanner.nextLine();
@@ -93,6 +107,18 @@ class Main {
             System.out.println("Hash: " + bytesToHex(hash));
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
+        }
+    }
+
+    private static void hashText() {
+        System.out.print("Enter the text to hash: ");
+        String text = scanner.nextLine();
+        try {
+            byte[] textData = text.getBytes(StandardCharsets.UTF_8);
+            byte[] hash = kmacxof256.cSHAKE(DEFAULT_MODE, textData, DEFAULT_MODE, new byte[0], new byte[0]);
+            System.out.println("Hash: " + bytesToHex(hash));
+        }    catch (Exception e) {
+            System.out.println("Error hashing text: " + e.getMessage());
         }
     }
 
@@ -111,10 +137,25 @@ class Main {
         String passphrase = scanner.nextLine();
         try {
             byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-            byte[] mac = kmacxof256.cSHAKE(256, fileData, 512, passphrase.getBytes(), "MAC".getBytes());
+            byte[] mac = kmacxof256.cSHAKE(256, fileData, 512, passphrase.getBytes(StandardCharsets.UTF_8), "MAC".getBytes(StandardCharsets.UTF_8));
             System.out.println("MAC: " + bytesToHex(mac));
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
+        }
+    }
+
+    private static void macOfText() {
+        System.out.println("Enter the text for MAC computation: ");
+        String text = scanner.nextLine();
+        System.out.print("Enter the passphrase: ");
+        String passphrase = scanner.nextLine();
+
+        try {
+            byte[] testData = text.getBytes(StandardCharsets.UTF_8);
+            byte[] mac = kmacxof256.cSHAKE(256, testData, 512, passphrase.getBytes(StandardCharsets.UTF_8), "MAC".getBytes(StandardCharsets.UTF_8));
+            System.out.println("MAC: " + bytesToHex(mac));
+        } catch (Exception e) {
+            System.out.println("Error reading text: " + e.getMessage());
         }
     }
 
