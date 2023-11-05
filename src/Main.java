@@ -25,7 +25,6 @@ class Main {
 
     public static void main(String[] args) throws IOException {
         //run_tests();
-
         Mode modeSelected = null;
         String fin = null, fout = null, fpw = null; // file names
         byte[] pw = null, m = null;
@@ -43,7 +42,7 @@ class Main {
         }
 
         // parse for input / output flags.
-        for (int ptr = 1; ptr < args.length - 2; ptr++) {
+        for (int ptr = 1; ptr < args.length - 1; ptr++) {
             switch (args[ptr].toLowerCase()) {
                 case "-fin" -> fin = args[ptr + 1];   // input from file.
                 case "-fout" -> fout = args[ptr + 1]; // output to file.
@@ -77,11 +76,9 @@ class Main {
                     modeSelected = Mode.HASH;
                     // collect text from STDIN
                 }
-                //hashText();
                 case 3 -> {
                     modeSelected = Mode.TAG;
                     fin = prompt("file input:");
-                    //macOfFile();
                 }
                 case 4 -> {
                     modeSelected = Mode.TAG;
@@ -109,6 +106,8 @@ class Main {
             // collect necessary data from files (fin, fpw)
             if(fpw != null && pw == null) // password file provided
                 pw = readFile(fpw);
+            else if(modeSelected != Mode.HASH && pw == null)
+                pw = prompt("password:").getBytes(); // prompt for password if needed.
             if(fin != null) m = readFile(fin);
             else m = prompt("Input file data: ").getBytes();
 
@@ -129,7 +128,7 @@ class Main {
                     Sha3.phex(out); // not printable if it's binary data.
                 else
                     for (byte b: out) {
-                        System.out.printf("%c", b);
+                        System.out.print((char) b);
                     }
             }
     }
