@@ -118,14 +118,19 @@ class Main {
                 case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
                 case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
             };
-            Sha3.phex(out);
+
             // results/output has been gathered, put said results where requested.
             if(fout != null) {
                 System.out.println("writing data to " + fout);
                     // write out to fout.
                 writeFile(fout, out);
             } else {
-                Sha3.phex(out); // not printable?
+                if(modeSelected != Mode.DECRYPT)
+                    Sha3.phex(out); // not printable if it's binary data.
+                else
+                    for (byte b: out) {
+                        System.out.printf("%c", b);
+                    }
             }
     }
 

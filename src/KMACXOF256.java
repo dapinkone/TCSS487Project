@@ -284,6 +284,9 @@ public class KMACXOF256 {
         if (Arrays.equals(tPrime, t)) {
             return m;
         } else {
+            //System.out.print("password: '");
+            //for(byte b : pw) System.out.print((char) b);
+            //System.out.println("'");
             throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
         }
     }
