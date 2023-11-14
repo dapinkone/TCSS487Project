@@ -12,21 +12,24 @@ public class EllipticCurve {
     private final static BigInteger D = new BigInteger("-39081");
     private final static BigInteger two = new BigInteger("2");
 
+    private final static BigInteger negThree = new BigInteger("-3");
     private final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
 
+    // Neutral element: G := (0, 1)
+    private GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
+
+    // x = -3 (mod p) and y = something
+    private GoldilocksPair publicGenerator = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P), BigInteger.ONE);
     public class GoldilocksPair {
 
         // constructor of neutral element
         private BigInteger x;
         private BigInteger y;
 
-
-
         // Constructor of GoldilocksPair
         //
         public GoldilocksPair(BigInteger x, BigInteger y) {
 
-            BigInteger NegThree = new BigInteger("-3");
             // public generator G = (x_0, y_0)
             // x = -3(mod p)
 
@@ -34,13 +37,32 @@ public class EllipticCurve {
             this.y = y;
         }
 
+        /**
+         * From x = sqrt ((1-y^2) / (1 + 39081 * y^2)) mod p
+         * We are calculating y by swapping x and y in the above equation
+         * because x and y are symmetric.
+         * If the radicand is negative, then it will be null.
+         * 1 out of 2 y_0 value can be null.
+         * TODO: Currently, this method does
+         * @return array of possible y_0 values.
+         */
+        private static BigInteger[] squareRootModP(BigInteger x) {
+            BigInteger[] possibleY_0 = new BigInteger[2];
+            BigInteger firstPart = BigInteger.ONE.subtract(multiplication(x, x)).mod(PRIME_P);
+            BigInteger secondPart = BigInteger.ONE.add(multiplication(BigInteger.valueOf(39081), multiplication(x, x))).mod(PRIME_P);
+            BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
 
+            BigInteger firstPossibleY_0 = sqrt(result, PRIME_P, true);
+            BigInteger secondPossibleY_0 = sqrt(result, PRIME_P, false);
+            // possible value of y could be null.
+            possibleY_0[0] = firstPossibleY_0;
+            possibleY_0[1] = secondPossibleY_0;
+
+            return possibleY_0;
+        }
         /**
          * Neutral element has a point of (0, 1)
          */
-        public class NeutralElement {
-
-        }
 
         // addition methdo
 //        public BigInteger addition() {
@@ -67,12 +89,13 @@ public class EllipticCurve {
 
         return result;
     }
-    private BigInteger multiplication (BigInteger one, BigInteger two) {
+    private static BigInteger multiplication (BigInteger one, BigInteger two) {
         return one.multiply(two).mod(PRIME_P);
     }
 
     /**
      * TODO: Refactoring the parameter to accept two goldilockspair points
+     * Computing the sum of two goldilocks points below:
      * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_1 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
      *                           | ----------------------              ----------------------                  |
      *                           |(1 + d*x_1 * x_2 * y_1 * y_2) [Part2] , (1 - d*x_1 * x_2 * y_1 * y_2) [part4]|
