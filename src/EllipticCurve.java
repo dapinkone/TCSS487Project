@@ -19,6 +19,7 @@ public class EllipticCurve {
         private final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
 
         // Constructor of GoldilocksPair
+        //
         public GoldilocksPair(BigInteger x, BigInteger y) {
 
             BigInteger NegThree = new BigInteger("-3");
@@ -29,6 +30,12 @@ public class EllipticCurve {
             BigInteger y_zero = new BigInteger("0");
 
         }
+
+        public neutralElement() {
+
+        }
+
+        // constructor for a elliptic curve itself
 
         public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
             assert (p.testBit(0) && p.testBit(1));
