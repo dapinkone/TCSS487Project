@@ -6,21 +6,21 @@ public class EllipticCurve {
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
 
     private final static BigInteger D = new BigInteger("-39081");
-    private final static BigInteger two = BigInteger.valueOf(2);
-
     final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
 
+    // 𝑟 = 2^446 − 13818066809895115352007386748515426880336692474882178609894547503885
+    final static BigInteger R = (BigInteger.TWO).pow(446).subtract(new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
     // Neutral element: O := (0, 1)
     /**
      * Neutral element has a point of (0, 1)
      */
-    private final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
+    public static final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
     /**
      * public generator G
      * x = -3 (mod p) and y = something
      **/
-    private final GoldilocksPair G = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
+    public static final GoldilocksPair G = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
                                                         GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(PRIME_P)));
 
     static class GoldilocksPair {
@@ -78,6 +78,15 @@ public class EllipticCurve {
             return new GoldilocksPair(x, y);
         }
         /**
+         * If point is (x, y), returns (-x, y)
+         * @return (-x, y)
+         */
+        public GoldilocksPair opposite() {
+            // -x == x * (P - 1)
+            var negX = this.x.multiply(PRIME_P.subtract(BigInteger.ONE)).mod(PRIME_P);
+            return new GoldilocksPair(negX, this.y);
+        }
+        /**
          * From x = sqrt ((1-y^2) / (1 + 39081 * y^2)) mod p
          * We are calculating y by swapping x and y in the above equation
          * because x and y are symmetric.
@@ -122,15 +131,6 @@ public class EllipticCurve {
         }
 
         /**
-         * If point is (x, y), returns (-x, y)
-         * @param pair
-         * @return (-x, y)
-         */
-        public static GoldilocksPair opposite(GoldilocksPair pair) {
-            return new GoldilocksPair(BigInteger.valueOf(-1).multiply(pair.x).mod(PRIME_P), pair.y);
-        }
-
-        /**
          * Compute a square root of v mod p with a specified least-significant bit
          * if such a root exists.
          *
@@ -151,25 +151,23 @@ public class EllipticCurve {
             }
             return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
         }
-    }
-
-    /**
-     * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
-     * Note: exponentiation of a point, and scalar multiplication are equivalent.
-     * P**s == s * P
-     * @param s integer to multiply a point
-     * @param P Goldilocks point to be multiplied
-     * @return  V = s * P
-     */
-    private GoldilocksPair exp(GoldilocksPair P, BigInteger s) {
-        GoldilocksPair V = P; // initialize V
-         for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
-             V = V.add(V);//edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
-             if (s.testBit(i)) {    // test i-th bit of s
-                V = V.add(P); //edwardsAddition(V.x, V.y, P.x, P.y);    // edwards point addition formula
-             }
-         }
-        return V;
+        /**
+         * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
+         * Note: exponentiation of a point, and scalar multiplication are equivalent.
+         * P**s == s * P
+         * @param s integer to multiply a point
+         * @return  V = s * P
+         */
+        public GoldilocksPair exp(BigInteger s) {
+            GoldilocksPair V = this; // initialize V
+            for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
+                V = V.add(V);//edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
+                if (s.testBit(i)) {    // test i-th bit of s
+                    V = V.add(this); //edwardsAddition(V.x, V.y, P.x, P.y);    // edwards point addition formula
+                }
+            }
+            return V;
+        }
     }
 
     /**
