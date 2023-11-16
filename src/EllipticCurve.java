@@ -9,8 +9,8 @@ public class EllipticCurve {
     final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
 
     // 𝑟 = 2^446 − 13818066809895115352007386748515426880336692474882178609894547503885
-    final static BigInteger R = (BigInteger.TWO).pow(446).subtract(new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
-    // Neutral element: O := (0, 1)
+    final static BigInteger R = (BigInteger.TWO).pow(446).subtract(
+            new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
     /**
      * Neutral element has a point of (0, 1)
      */
@@ -47,12 +47,6 @@ public class EllipticCurve {
             return this.x.equals(that.x) && this.y.equals(that.y);
         }
 
-        @Override
-        public int hashCode() {
-            int result = x.hashCode();
-            result = 31 * result + y.hashCode();
-            return result;
-        }
         /**
          * Computing the sum of two goldilocks points below:
          * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_1 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
@@ -86,71 +80,9 @@ public class EllipticCurve {
             var negX = this.x.multiply(PRIME_P.subtract(BigInteger.ONE)).mod(PRIME_P);
             return new GoldilocksPair(negX, this.y);
         }
-        /**
-         * From x = sqrt ((1-y^2) / (1 + 39081 * y^2)) mod p
-         * We are calculating y by swapping x and y in the above equation
-         * because x and y are symmetric.
-         * If the radicand is negative, then it will be null.
-         * 1 out of 2 y_0 value can be null.
-         * By default: if both square root values equal to null, throw IllegalArgument Exception
-         * if both possible y values are null.
-         *
-         * @param x BigInteger value of x
-         *
-         * @return array of possible y_0 values.
-         */
-        public static BigInteger squareRootModP(BigInteger x) {
-            BigInteger[] possibleY_0 = new BigInteger[2];
-            BigInteger yValue;
 
-            BigInteger firstPart = BigInteger.ONE.subtract(mult(x, x)).mod(PRIME_P);
-            BigInteger secondPart = BigInteger.ONE.add(mult(BigInteger.valueOf(39081), mult(x, x))).mod(PRIME_P);
-            BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
 
-            BigInteger firstPossibleY_0 = sqrt(result, PRIME_P, true);
-            BigInteger secondPossibleY_0 = sqrt(result, PRIME_P, false);
-            // possible value of y could be null.
-            possibleY_0[0] = firstPossibleY_0;
-            possibleY_0[1] = secondPossibleY_0;
 
-            // both Y values are not null, return 0th index
-            if (possibleY_0[0] != null && possibleY_0[1] != null) {
-                yValue = possibleY_0[0];
-                System.out.println("Both y values are not null");
-            // Only 0th index of Y = null
-            } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
-                yValue = possibleY_0[1];
-            // Only 1st index of Y = null
-            } else if (possibleY_0[0] != null && possibleY_0[1] == null) {
-                yValue = possibleY_0[0];
-            // both 0th and 1st index of Y = null
-            } else {
-                throw new IllegalArgumentException("Both square root values are null");
-            }
-            return yValue;
-        }
-
-        /**
-         * Compute a square root of v mod p with a specified least-significant bit
-         * if such a root exists.
-         *
-         * @param v the radicand.
-         * @param p the modulus (must satisfy p mod 4 = 3).
-         * @param lsb desired least significant bit (true: 1, false: 0).
-         * @return a square root r of v mod p with r mod 2 = 1 iff lsb = true
-         * if such a root exists, otherwise null.
-         */
-        public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
-            assert (p.testBit(0) && p.testBit(1));
-            if (v.signum() == 0) {
-                return BigInteger.ZERO;
-            }
-            BigInteger r = v.modPow(p.shiftRight(2).add(BigInteger.ONE), p);
-            if (r.testBit(0) != lsb) {
-                r = p.subtract(r); // correct the lsb
-            }
-            return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
-        }
         /**
          * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
          * Note: exponentiation of a point, and scalar multiplication are equivalent.
@@ -182,8 +114,70 @@ public class EllipticCurve {
         }
         return result;
     }
+    /**
+     * Compute a square root of v mod p with a specified least-significant bit
+     * if such a root exists.
+     *
+     * @param v the radicand.
+     * @param p the modulus (must satisfy p mod 4 = 3).
+     * @param lsb desired least significant bit (true: 1, false: 0).
+     * @return a square root r of v mod p with r mod 2 = 1 iff lsb = true
+     * if such a root exists, otherwise null.
+     */
+    public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
+        assert (p.testBit(0) && p.testBit(1));
+        if (v.signum() == 0) {
+            return BigInteger.ZERO;
+        }
+        BigInteger r = v.modPow(p.shiftRight(2).add(BigInteger.ONE), p);
+        if (r.testBit(0) != lsb) {
+            r = p.subtract(r); // correct the lsb
+        }
+        return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
+    }
+    /**
+     * From x = sqrt ((1-y^2) / (1 + 39081 * y^2)) mod p
+     * We are calculating y by swapping x and y in the above equation
+     * because x and y are symmetric.
+     * If the radicand is negative, then it will be null.
+     * 1 out of 2 y_0 value can be null.
+     * By default: if both square root values equal to null, throw IllegalArgument Exception
+     * if both possible y values are null.
+     *
+     * @param x BigInteger value of x
+     *
+     * @return array of possible y_0 values.
+     */
+    public static BigInteger squareRootModP(BigInteger x) {
+        BigInteger[] possibleY_0 = new BigInteger[2];
+        BigInteger yValue;
 
+        BigInteger firstPart = BigInteger.ONE.subtract(mult(x, x)).mod(PRIME_P);
+        BigInteger secondPart = BigInteger.ONE.add(mult(BigInteger.valueOf(39081), mult(x, x))).mod(PRIME_P);
+        BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
 
+        BigInteger firstPossibleY_0 = sqrt(result, PRIME_P, true);
+        BigInteger secondPossibleY_0 = sqrt(result, PRIME_P, false);
+        // possible value of y could be null.
+        possibleY_0[0] = firstPossibleY_0;
+        possibleY_0[1] = secondPossibleY_0;
+
+        // both Y values are not null, return 0th index
+        if (possibleY_0[0] != null && possibleY_0[1] != null) {
+            yValue = possibleY_0[0];
+            System.out.println("Both y values are not null");
+            // Only 0th index of Y = null
+        } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
+            yValue = possibleY_0[1];
+            // Only 1st index of Y = null
+        } else if (possibleY_0[0] != null && possibleY_0[1] == null) {
+            yValue = possibleY_0[0];
+            // both 0th and 1st index of Y = null
+        } else {
+            throw new IllegalArgumentException("Both square root values are null");
+        }
+        return yValue;
+    }
 
     // G
 }

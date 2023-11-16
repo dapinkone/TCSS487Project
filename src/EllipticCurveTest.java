@@ -8,10 +8,8 @@ public class EllipticCurveTest {
 //    EllipticCurve testCurve = new EllipticCurve();
     // constants
     final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
-    private EllipticCurve.GoldilocksPair publicGenerator = new EllipticCurve.GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
-        EllipticCurve.GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(PRIME_P)));
-
-    // Neutral element: G := (0, 1)
+    private final EllipticCurve.GoldilocksPair publicGenerator = EllipticCurve.G;
+    // Neutral element: O := (0, 1)
     private final EllipticCurve.GoldilocksPair neutralElement = new EllipticCurve.GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
     // TODO:
@@ -33,9 +31,9 @@ public class EllipticCurveTest {
     @Test
     public void testSquareRootModsP() {
         EllipticCurve.GoldilocksPair pair = new EllipticCurve.GoldilocksPair(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P),
-                                                EllipticCurve.GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P)));
+                                                EllipticCurve.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P)));
         // y value of a public generator of Elliptic Curve
-        BigInteger yValue = EllipticCurve.GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P));
+        BigInteger yValue = EllipticCurve.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P));
         Assertions.assertNotEquals(yValue, null);
 
         // y value that is guaranteed to not be negative
@@ -72,10 +70,12 @@ public class EllipticCurveTest {
      */
     @Test
     public void field_tests() {
-        var O = EllipticCurve.neutralElement;
-        var G = EllipticCurve.G;
+        var O = EllipticCurve.neutralElement; // (0, 1)
+        var G = EllipticCurve.G; // ( -3 mod P, sqrt((1 − x^2)/(1 + 39081x^2)) mod P.
         //    0 ⋅ 𝐺 = O
-        Assertions.assertEquals(G.exp(BigInteger.ZERO), O);
+
+        var U = G.exp(BigInteger.ZERO);
+        Assertions.assertEquals(U, O);
 
         //    1 ⋅ 𝐺 = 𝐺
         Assertions.assertEquals(G.exp(BigInteger.ONE), G);
