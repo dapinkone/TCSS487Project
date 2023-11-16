@@ -56,8 +56,7 @@ public class EllipticCurveTest {
     @Test
     public void test_G_Plus_Negative_G() {
         EllipticCurve.GoldilocksPair negativeG = EllipticCurve.GoldilocksPair.opposite(publicGenerator);
-        EllipticCurve.GoldilocksPair result = publicGenerator.edwardsAddition(publicGenerator.x, publicGenerator.y,
-                                                                                negativeG.x, negativeG.y);
+        EllipticCurve.GoldilocksPair result = publicGenerator.add(negativeG);
 //        Assertions.assertEquals(result, neutralElement);
 //        Assertions.assertEquals(result, negativeG);
         Assertions.assertEquals(result, neutralElement);
