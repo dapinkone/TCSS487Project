@@ -6,6 +6,13 @@ import java.math.BigInteger;
 public class EllipticCurveTest {
 
 //    EllipticCurve testCurve = new EllipticCurve();
+    // constants
+    final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
+    private EllipticCurve.GoldilocksPair publicGenerator = new EllipticCurve.GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
+        EllipticCurve.GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(PRIME_P)));
+
+    // Neutral element: G := (0, 1)
+    private final EllipticCurve.GoldilocksPair neutralElement = new EllipticCurve.GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
     // TODO:
     @Test
@@ -41,10 +48,23 @@ public class EllipticCurveTest {
     }
 
     /**
-     * Test for opposite
-     * P = (x, y), then -P = (-x, y)
-     * Can we say that P - P = (x -x, y + y) = (0, 2*y)
+     * Test G + (-G) = O
+     * Test opposite & Edwards Addition
+     * G = (x, y), then -G = (-x, y)
+     *
       */
+    @Test
+    public void test_G_Plus_Negative_G() {
+        EllipticCurve.GoldilocksPair negativeG = EllipticCurve.GoldilocksPair.opposite(publicGenerator);
+        EllipticCurve.GoldilocksPair result = publicGenerator.edwardsAddition(publicGenerator.x, publicGenerator.y,
+                                                                                negativeG.x, negativeG.y);
+//        Assertions.assertEquals(result, neutralElement);
+//        Assertions.assertEquals(result, negativeG);
+        Assertions.assertEquals(result, neutralElement);
+    }
 
-
+    /**
+     * Test Case: 0 * G = 0
+     *      Neutral Element * G = Neutral Element
+     */
 }
