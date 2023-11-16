@@ -12,7 +12,7 @@ public class EllipticCurve {
     private final static BigInteger D = new BigInteger("-39081");
     private final static BigInteger two = BigInteger.valueOf(2);
 
-    final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
+    final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
 
     // Neutral element: G := (0, 1)
     private final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
@@ -97,72 +97,71 @@ public class EllipticCurve {
          * Neutral element has a point of (0, 1)
          */
 
-        // addition methdo
-//        public BigInteger addition() {
-//
-//        }
-        // constructor for a elliptic curve itself
+        /**
+         * TODO: Refactoring the parameter to accept two goldilockspair points
+         * Computing the sum of two goldilocks points below:
+         * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_1 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
+         *                           | ----------------------              ----------------------                  |
+         *                           |(1 + d*x_1 * x_2 * y_1 * y_2) [Part2] , (1 - d*x_1 * x_2 * y_1 * y_2) [part4]|
+         * Given 1st point (x_1, y_1) and 2nd point (x_2, y_2)
+         * @param x_1 1st point's x value
+         * @param y_1 1st point's y value
+         * @param x_2 2nd point's x value
+         * @param y_2 2nd point's y value
+         * @return Edward Curve addition of (x_1, y_1) + (x_2, y_2)
+         */
+        //TODO: I changed the access level to public, so that I can test the methods
+        public GoldilocksPair edwardsAddition(BigInteger x_1, BigInteger y_1, BigInteger x_2, BigInteger y_2) {
 
-        public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
-            assert (p.testBit(0) && p.testBit(1));
-            if (v.signum() == 0) {
-                return BigInteger.ZERO;
-            }
-            BigInteger r = v.modPow(p.shiftRight(2).add(BigInteger.ONE), p);
-            if (r.testBit(0) != lsb) {
-                r = p.subtract(r); // correct the lsb
-            }
-            return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
+            BigInteger part1 = (multiplication(x_1, y_1)).add(multiplication(x_2, y_2));
+            BigInteger part2 = (BigInteger.ONE).add(multiplication(multiplication( D, multiplication(x_1, x_2)), multiplication(y_1, y_2)));
+            BigInteger part3 = (multiplication(y_1, y_2)).subtract(multiplication(x_1, x_2));
+            BigInteger part4 = (BigInteger.ONE).subtract(multiplication(multiplication(D, multiplication(x_1, x_2)) , multiplication(y_1, y_2)));
+
+            BigInteger x = part1.multiply(part2.modInverse(PRIME_P)).mod(PRIME_P); // division in modular arithmetic
+            BigInteger y = part3.multiply(part4.modInverse(PRIME_P)).mod(PRIME_P);
+            return new GoldilocksPair(x, y);
         }
+
+        /**
+         * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
+         * @param s integer to multiply a point
+         * @param P Number of the point
+         * @return  V = s * P
+         */
+        private GoldilocksPair mul(BigInteger s, GoldilocksPair P) {
+            GoldilocksPair V = P; // initialize V
+            for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
+                V = edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
+                if (s.testBit(i)) {    // test i-th bit of s
+                    V = edwardsAddition(V.x, V.y, P.x, P.y);    // edwards point addition formula
+                }
+            }
+            return V;
+        }
+
     }
 
     // exponentiation
     // Is the input of exponentiation supposed to be:
     // BigInteger s, GoldilocksPoint P
 
-    /**
-     * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
-     * @param s integer to multiply a point
-     * @param P Number of the point
-     * @return  V = s * P
-     */
-    private GoldilocksPair exponentiation(BigInteger s, GoldilocksPair P) {
-        GoldilocksPair V = P; // initialize V
-         for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
-             V = edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
-             if (s.testBit(i)) {    // test i-th bit of s
-                V = edwardsAddition(V.x, V.y, P.x, P.y);    // edwards point addition formula
-             }
-         }
-        return V;
-    }
+
     private static BigInteger multiplication (BigInteger one, BigInteger two) {
         return one.multiply(two).mod(PRIME_P);
     }
 
-    /**
-     * TODO: Refactoring the parameter to accept two goldilockspair points
-     * Computing the sum of two goldilocks points below:
-     * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_1 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
-     *                           | ----------------------              ----------------------                  |
-     *                           |(1 + d*x_1 * x_2 * y_1 * y_2) [Part2] , (1 - d*x_1 * x_2 * y_1 * y_2) [part4]|
-     * Given 1st point (x_1, y_1) and 2nd point (x_2, y_2)
-     * @param x_1 1st point's x value
-     * @param y_1 1st point's y value
-     * @param x_2 2nd point's x value
-     * @param y_2 2nd point's y value
-     * @return Edward Curve addition of (x_1, y_1) + (x_2, y_2)
-     */
-    private GoldilocksPair edwardsAddition(BigInteger x_1, BigInteger y_1, BigInteger x_2, BigInteger y_2) {
-
-        BigInteger part1 = (multiplication(x_1, y_1)).add(multiplication(x_2, y_2));
-        BigInteger part2 = (BigInteger.ONE).add(multiplication(multiplication( D, multiplication(x_1, x_2)), multiplication(y_1, y_2)));
-        BigInteger part3 = (multiplication(y_1, y_2)).subtract(multiplication(x_1, x_2));
-        BigInteger part4 = (BigInteger.ONE).subtract(multiplication(multiplication(D, multiplication(x_1, x_2)) , multiplication(y_1, y_2)));
-
-        BigInteger x = part1.multiply(part2.modInverse(PRIME_P)).mod(PRIME_P); // division in modular arithmetic
-        BigInteger y = part3.multiply(part4.modInverse(PRIME_P)).mod(PRIME_P);
-        return new GoldilocksPair(x, y);
+    // TODO: Move the method
+    public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
+        assert (p.testBit(0) && p.testBit(1));
+        if (v.signum() == 0) {
+            return BigInteger.ZERO;
+        }
+        BigInteger r = v.modPow(p.shiftRight(2).add(BigInteger.ONE), p);
+        if (r.testBit(0) != lsb) {
+            r = p.subtract(r); // correct the lsb
+        }
+        return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
     }
 
     // G
