@@ -163,7 +163,7 @@ public class EllipticCurve {
      * @param P Number of the point
      * @return  V = s * P
      */
-    private GoldilocksPair exponentiation(BigInteger s, GoldilocksPair P) {
+    private GoldilocksPair exp(GoldilocksPair P, BigInteger s) {
         GoldilocksPair V = P; // initialize V
          for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
              V = V.add(V);//edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
