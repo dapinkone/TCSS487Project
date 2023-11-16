@@ -8,13 +8,13 @@ public class EllipticCurve {
     private final static BigInteger D = new BigInteger("-39081");
     private final static BigInteger two = BigInteger.valueOf(2);
 
-    final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
+    final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
 
     // Neutral element: O := (0, 1)
     /**
      * Neutral element has a point of (0, 1)
      */
-    private final GoldilocksPair neutral_element = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
+    private final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
     /**
      * public generator G
@@ -29,7 +29,8 @@ public class EllipticCurve {
         final BigInteger x;
         final BigInteger y;
 
-
+        // Constructor of GoldilocksPair
+        //
         public GoldilocksPair(BigInteger x, BigInteger y) {
             this.x = x;
             this.y = y;
@@ -103,10 +104,10 @@ public class EllipticCurve {
             possibleY_0[0] = firstPossibleY_0;
             possibleY_0[1] = secondPossibleY_0;
 
-            // both Y values are null, return 0th index
+            // both Y values are not null, return 0th index
             if (possibleY_0[0] != null && possibleY_0[1] != null) {
                 yValue = possibleY_0[0];
-                System.out.println("Both y values are null");
+                System.out.println("Both y values are not null");
             // Only 0th index of Y = null
             } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
                 yValue = possibleY_0[1];
@@ -183,5 +184,4 @@ public class EllipticCurve {
 
 
     // G
-
 }
