@@ -12,11 +12,10 @@ public class EllipticCurve {
     private final static BigInteger D = new BigInteger("-39081");
     private final static BigInteger two = BigInteger.valueOf(2);
 
-    private final static BigInteger negThree = new BigInteger("-3");
     final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
 
     // Neutral element: G := (0, 1)
-    private GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
+    private final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
     // x = -3 (mod p) and y = something
     private GoldilocksPair publicGenerator = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
@@ -86,7 +85,7 @@ public class EllipticCurve {
         /**
          * If point is (x, y), returns (-x, y)
          * @param pair
-         * @return
+         * @return (-x, y)
          */
         public static GoldilocksPair opposite(GoldilocksPair pair) {
 
@@ -117,11 +116,11 @@ public class EllipticCurve {
     }
 
     // exponentiation
-    private BigInteger exponentiation() {
-        BigInteger result = new BigInteger("0");
-
-        return result;
-    }
+//    private BigInteger exponentiation() {
+//        BigInteger result = new BigInteger("0");
+//
+//        return result;
+//    }
     private static BigInteger multiplication (BigInteger one, BigInteger two) {
         return one.multiply(two).mod(PRIME_P);
     }
@@ -132,15 +131,12 @@ public class EllipticCurve {
      * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_1 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
      *                           | ----------------------              ----------------------                  |
      *                           |(1 + d*x_1 * x_2 * y_1 * y_2) [Part2] , (1 - d*x_1 * x_2 * y_1 * y_2) [part4]|
-     *
-     * one = (x_1 * y_1)
-     * two = (y_1 * x_2)
-     *                            one * two
-     *                            ---------
-     *                            1 + d * one * two,
-     * @param
-     * @param
-     * @return
+     * Given 1st point (x_1, y_1) and 2nd point (x_2, y_2)
+     * @param x_1 1st point's x value
+     * @param y_1 1st point's y value
+     * @param x_2 2nd point's x value
+     * @param y_2 2nd point's y value
+     * @return Edward Curve addition of (x_1, y_1) + (x_2, y_2)
      */
     private GoldilocksPair edwardsAddition(BigInteger x_1, BigInteger y_1, BigInteger x_2, BigInteger y_2) {
 
