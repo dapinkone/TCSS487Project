@@ -10,7 +10,7 @@ public class EllipticCurve {
     //
 
     private final static BigInteger D = new BigInteger("-39081");
-    private final static BigInteger two = new BigInteger("2");
+    private final static BigInteger two = BigInteger.valueOf(2);
 
     private final static BigInteger negThree = new BigInteger("-3");
     private final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
@@ -20,11 +20,12 @@ public class EllipticCurve {
 
     // x = -3 (mod p) and y = something
     private GoldilocksPair publicGenerator = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P), BigInteger.ONE);
-    public class GoldilocksPair {
+
+    static class GoldilocksPair {
 
         // constructor of neutral element
-        private BigInteger x;
-        private BigInteger y;
+        final BigInteger x;
+        final BigInteger y;
 
         // Constructor of GoldilocksPair
         //
@@ -43,11 +44,15 @@ public class EllipticCurve {
          * because x and y are symmetric.
          * If the radicand is negative, then it will be null.
          * 1 out of 2 y_0 value can be null.
+         * By default: if both square root values equal to null, throw IllegalArgument Exception
+         * if both possible y values are null.
          * TODO: Currently, this method does
          * @return array of possible y_0 values.
          */
-        private static BigInteger[] squareRootModP(BigInteger x) {
+        private static BigInteger squareRootModP(BigInteger x) {
             BigInteger[] possibleY_0 = new BigInteger[2];
+            BigInteger yValue = BigInteger.valueOf(0);
+
             BigInteger firstPart = BigInteger.ONE.subtract(multiplication(x, x)).mod(PRIME_P);
             BigInteger secondPart = BigInteger.ONE.add(multiplication(BigInteger.valueOf(39081), multiplication(x, x))).mod(PRIME_P);
             BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
@@ -58,7 +63,37 @@ public class EllipticCurve {
             possibleY_0[0] = firstPossibleY_0;
             possibleY_0[1] = secondPossibleY_0;
 
-            return possibleY_0;
+            // both Y values are null, return 0th index
+            if (possibleY_0[0] != null && possibleY_0[1] != null) {
+                yValue = possibleY_0[0];
+                System.out.println("Both y values are null");
+            // Only 0th index of Y = null
+            } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
+                yValue = possibleY_0[1];
+            // Only 1st index of Y = null
+            } else if (possibleY_0[0] != null && possibleY_0[1] == null) {
+                yValue = possibleY_0[0];
+            // both 0th and 1st index of Y = null
+            } else {
+                throw new IllegalArgumentException("Both square root values are null");
+            }
+            return yValue;
+        }
+
+        /**
+         *
+         * @param possibleValues
+         * @return
+         */
+        private static BigInteger filterNull(BigInteger[] possibleValues) {
+            BigInteger result = BigInteger.ZERO;
+
+            for (int i = 0; i < possibleValues.length; i++) {
+                if (possibleValues[i] != null) {
+                    result = possibleValues[i];
+                }
+            }
+            return result;
         }
         /**
          * Neutral element has a point of (0, 1)
