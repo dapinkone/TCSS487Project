@@ -4,21 +4,24 @@ import java.util.function.Predicate;
 public class EllipticCurve {
 
     // data structure to represent goldilocks pair (x, y)
-    // Edwards curve equation = x^2 + y^2 = 1 +dx^2y^2 with d = -39081
-
-    // modular arithmetic addition example:
-    //
+    // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
 
     private final static BigInteger D = new BigInteger("-39081");
     private final static BigInteger two = BigInteger.valueOf(2);
 
     final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
 
-    // Neutral element: G := (0, 1)
-    private final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
+    // Neutral element: O := (0, 1)
+    /**
+     * Neutral element has a point of (0, 1)
+     */
+    private final GoldilocksPair neutral_element = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
-    // x = -3 (mod p) and y = something
-    private GoldilocksPair publicGenerator = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
+    /**
+     * public generator G
+     * x = -3 (mod p) and y = something
+     **/
+    private final GoldilocksPair G = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
                                                         GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(PRIME_P)));
 
     static class GoldilocksPair {
@@ -88,21 +91,27 @@ public class EllipticCurve {
          * @return (-x, y)
          */
         public static GoldilocksPair opposite(GoldilocksPair pair) {
-
             return new GoldilocksPair(BigInteger.valueOf(-1).multiply(pair.x).mod(PRIME_P), pair.y);
         }
 
 
-        /**
-         * Neutral element has a point of (0, 1)
-         */
+
 
         // addition methdo
 //        public BigInteger addition() {
 //
 //        }
         // constructor for a elliptic curve itself
-
+        /**
+         * Compute a square root of v mod p with a specified least-significant bit
+         * if such a root exists.
+         *
+         * @param v the radicand.
+         * @param p the modulus (must satisfy p mod 4 = 3).
+         * @param lsb desired least significant bit (true: 1, false: 0).
+         * @return a square root r of v mod p with r mod 2 = 1 iff lsb = true
+         * if such a root exists, otherwise null.
+         */
         public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
             assert (p.testBit(0) && p.testBit(1));
             if (v.signum() == 0) {
@@ -166,4 +175,5 @@ public class EllipticCurve {
     }
 
     // G
+
 }
