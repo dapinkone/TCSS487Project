@@ -55,7 +55,7 @@ public class EllipticCurveTest {
       */
     @Test
     public void test_G_Plus_Negative_G() {
-        EllipticCurve.GoldilocksPair negativeG = EllipticCurve.GoldilocksPair.opposite(publicGenerator);
+        EllipticCurve.GoldilocksPair negativeG = publicGenerator.opposite();
         EllipticCurve.GoldilocksPair result = publicGenerator.add(negativeG);
 //        Assertions.assertEquals(result, neutralElement);
 //        Assertions.assertEquals(result, negativeG);
@@ -66,4 +66,35 @@ public class EllipticCurveTest {
      * Test Case: 0 * G = 0
      *      Neutral Element * G = Neutral Element
      */
+
+    /**
+     * Runs given tests to verify the integrity of field <F> of the curve
+     */
+    @Test
+    public void field_tests() {
+        var O = EllipticCurve.neutralElement;
+        var G = EllipticCurve.G;
+        //    0 ⋅ 𝐺 = O
+        Assertions.assertEquals(G.exp(BigInteger.ZERO), O);
+
+        //    1 ⋅ 𝐺 = 𝐺
+        Assertions.assertEquals(G.exp(BigInteger.ONE), G);
+
+        //    𝐺 + (−𝐺) = 𝑂 where −𝐺 = (𝑝 − 𝑥, 𝑦) for 𝐺 = (𝑥, 𝑦)
+        Assertions.assertEquals(G.add(G.opposite()), O); // 𝐺 + (−𝐺) = 𝑂
+            // −𝐺 = (𝑝 − 𝑥, 𝑦)
+        Assertions.assertEquals(G.opposite(), new EllipticCurve.GoldilocksPair(PRIME_P.subtract(G.x), G.y));
+
+        //    2 ⋅ 𝐺 = 𝐺 + 𝐺
+        Assertions.assertEquals(G.exp(BigInteger.TWO), G.add(G));
+
+        //    4 ⋅ 𝐺 = 2 ⋅ (2 ⋅ 𝐺)
+        Assertions.assertEquals(G.exp(BigInteger.valueOf(4)), G.exp(BigInteger.TWO).exp(BigInteger.TWO));
+
+        //     4 ⋅ 𝐺 ≠ 𝑂
+        Assertions.assertNotEquals(G.exp(BigInteger.valueOf(4)), O);
+
+        //    𝑟 ⋅ 𝐺 = 𝑂
+        Assertions.assertEquals(G.exp(EllipticCurve.R), O);
+    }
 }
