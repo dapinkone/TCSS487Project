@@ -13,13 +13,14 @@ public class EllipticCurve {
     private final static BigInteger two = BigInteger.valueOf(2);
 
     private final static BigInteger negThree = new BigInteger("-3");
-    private final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
+    final static BigInteger PRIME_P = ((two.pow(448)).subtract(two.pow(224))).subtract(BigInteger.ONE);
 
     // Neutral element: G := (0, 1)
     private GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
     // x = -3 (mod p) and y = something
-    private GoldilocksPair publicGenerator = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P), BigInteger.ONE);
+    private GoldilocksPair publicGenerator = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
+                                                        GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(PRIME_P)));
 
     static class GoldilocksPair {
 
@@ -46,12 +47,14 @@ public class EllipticCurve {
          * 1 out of 2 y_0 value can be null.
          * By default: if both square root values equal to null, throw IllegalArgument Exception
          * if both possible y values are null.
-         * TODO: Currently, this method does
+         *
+         * @param x BigInteger value of x
+         *
          * @return array of possible y_0 values.
          */
-        private static BigInteger squareRootModP(BigInteger x) {
+        public static BigInteger squareRootModP(BigInteger x) {
             BigInteger[] possibleY_0 = new BigInteger[2];
-            BigInteger yValue = BigInteger.valueOf(0);
+            BigInteger yValue;
 
             BigInteger firstPart = BigInteger.ONE.subtract(multiplication(x, x)).mod(PRIME_P);
             BigInteger secondPart = BigInteger.ONE.add(multiplication(BigInteger.valueOf(39081), multiplication(x, x))).mod(PRIME_P);
@@ -81,20 +84,15 @@ public class EllipticCurve {
         }
 
         /**
-         *
-         * @param possibleValues
+         * If point is (x, y), returns (-x, y)
+         * @param pair
          * @return
          */
-        private static BigInteger filterNull(BigInteger[] possibleValues) {
-            BigInteger result = BigInteger.ZERO;
+        public static GoldilocksPair opposite(GoldilocksPair pair) {
 
-            for (int i = 0; i < possibleValues.length; i++) {
-                if (possibleValues[i] != null) {
-                    result = possibleValues[i];
-                }
-            }
-            return result;
+            return new GoldilocksPair(BigInteger.valueOf(-1).multiply(pair.x).mod(PRIME_P), pair.y);
         }
+
         /**
          * Neutral element has a point of (0, 1)
          */
