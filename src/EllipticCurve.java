@@ -65,10 +65,10 @@ public class EllipticCurve {
             possibleY_0[0] = firstPossibleY_0;
             possibleY_0[1] = secondPossibleY_0;
 
-            // both Y values are null, return 0th index
+            // both Y values are not null, return 0th index
             if (possibleY_0[0] != null && possibleY_0[1] != null) {
                 yValue = possibleY_0[0];
-                System.out.println("Both y values are null");
+                System.out.println("Both y values are not null");
             // Only 0th index of Y = null
             } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
                 yValue = possibleY_0[1];
@@ -139,6 +139,8 @@ public class EllipticCurve {
             }
             return V;
         }
+
+
 
     }
 
