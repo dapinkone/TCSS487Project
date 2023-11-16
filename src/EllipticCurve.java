@@ -92,6 +92,7 @@ public class EllipticCurve {
             return new GoldilocksPair(BigInteger.valueOf(-1).multiply(pair.x).mod(PRIME_P), pair.y);
         }
 
+
         /**
          * Neutral element has a point of (0, 1)
          */
@@ -116,11 +117,25 @@ public class EllipticCurve {
     }
 
     // exponentiation
-//    private BigInteger exponentiation() {
-//        BigInteger result = new BigInteger("0");
-//
-//        return result;
-//    }
+    // Is the input of exponentiation supposed to be:
+    // BigInteger s, GoldilocksPoint P
+
+    /**
+     * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
+     * @param s integer to multiply a point
+     * @param P Number of the point
+     * @return  V = s * P
+     */
+    private GoldilocksPair exponentiation(BigInteger s, GoldilocksPair P) {
+        GoldilocksPair V = P; // initialize V
+         for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
+             V = edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
+             if (s.testBit(i)) {    // test i-th bit of s
+                V = edwardsAddition(V.x, V.y, P.x, P.y);    // edwards point addition formula
+             }
+         }
+        return V;
+    }
     private static BigInteger multiplication (BigInteger one, BigInteger two) {
         return one.multiply(two).mod(PRIME_P);
     }
