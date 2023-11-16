@@ -26,8 +26,8 @@ public class EllipticCurve {
     static class GoldilocksPair {
 
         // constructor of neutral element
-        final BigInteger x;
-        final BigInteger y;
+        final public BigInteger x;
+        final public BigInteger y;
 
         // Constructor of GoldilocksPair
         //
@@ -153,14 +153,12 @@ public class EllipticCurve {
         }
     }
 
-    // exponentiation
-    // Is the input of exponentiation supposed to be:
-    // BigInteger s, GoldilocksPoint P
-
     /**
      * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
+     * Note: exponentiation of a point, and scalar multiplication are equivalent.
+     * P**s == s * P
      * @param s integer to multiply a point
-     * @param P Number of the point
+     * @param P Goldilocks point to be multiplied
      * @return  V = s * P
      */
     private GoldilocksPair exp(GoldilocksPair P, BigInteger s) {
@@ -173,6 +171,12 @@ public class EllipticCurve {
          }
         return V;
     }
+
+    /**
+     * Multiply various given BigIntegers together, mod PRIME_P
+     * @param lst list of bigints to be multiplied
+     * @return result mod PRIME_P
+     */
     private static BigInteger mult(BigInteger ...lst) {
         var result = new BigInteger("1");
         for(var x : lst) {
