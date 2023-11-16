@@ -30,15 +30,28 @@ public class EllipticCurve {
         final BigInteger x;
         final BigInteger y;
 
-        // Constructor of GoldilocksPair
-        //
+
         public GoldilocksPair(BigInteger x, BigInteger y) {
-
-            // public generator G = (x_0, y_0)
-            // x = -3(mod p)
-
             this.x = x;
             this.y = y;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if(!(o instanceof GoldilocksPair) | o == null) return false;
+
+            var that = (GoldilocksPair) o;
+            if(this.x == null | this.y == null) return false;
+            if(that.x == null ^ that.y == null) return false;
+
+            return this.x.equals(that.x) && this.y.equals(that.y);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = x.hashCode();
+            result = 31 * result + y.hashCode();
+            return result;
         }
 
         /**
