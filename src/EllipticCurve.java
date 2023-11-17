@@ -35,7 +35,10 @@ public class EllipticCurve {
             this.x = x;
             this.y = y;
         }
-
+        @Override
+        public String toString() {
+            return String.format("(%s, %s)", x, y);
+        }
         @Override
         public boolean equals(Object o) {
             if(!(o instanceof GoldilocksPair) | o == null) return false;
@@ -110,7 +113,7 @@ public class EllipticCurve {
     private static BigInteger mult(BigInteger ...lst) {
         var result = new BigInteger("1");
         for(var x : lst) {
-            result = result.multiply(x).mod(PRIME_P);
+            result = x != null ? result.multiply(x).mod(PRIME_P): result;
         }
         return result;
     }
