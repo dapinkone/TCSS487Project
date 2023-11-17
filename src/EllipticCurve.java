@@ -6,12 +6,17 @@ public class EllipticCurve {
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
 
     private final static BigInteger D = new BigInteger("-39081");
-    final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
+    // P := 2^448 − 2^224 − 1
+    final static BigInteger PRIME_P = (
+            BigInteger.TWO.pow(448) // 2^448
+                    .subtract(BigInteger.TWO.pow(224)) // - 2^224
+                    .subtract(BigInteger.ONE)); // - 1
 
     // 𝑟 = 2^446 − 13818066809895115352007386748515426880336692474882178609894547503885
     final static BigInteger R = (BigInteger.TWO).pow(446).subtract(
             new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
     /**
+     * Neutral element: O := (0, 1)
      * Neutral element has a point of (0, 1)
      */
     public static final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
@@ -20,8 +25,19 @@ public class EllipticCurve {
      * public generator G
      * x = -3 (mod p) and y = something
      **/
-    public static final GoldilocksPair G = new GoldilocksPair(BigInteger.valueOf(-3).mod(PRIME_P),
-                                                        GoldilocksPair.squareRootModP(BigInteger.valueOf(-3).mod(PRIME_P)));
+    private static final BigInteger G_x = PRIME_P.subtract(BigInteger.valueOf(3));
+    public static final GoldilocksPair G = new GoldilocksPair( G_x,
+            //BigInteger.valueOf(-3).mod(PRIME_P),
+            // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
+            sqrt(
+                    BigInteger.ONE.subtract(mult(G_x, G_x)) // (1 - x^2)
+                            .multiply( // ... / ( 1 + 39081*x^2 )
+                                BigInteger.ONE.add(mult(G_x, G_x, BigInteger.valueOf(39081)))
+                                .modInverse(PRIME_P)),
+                    PRIME_P,
+                    false
+            ).mod(PRIME_P)
+    );
 
     static class GoldilocksPair {
 
