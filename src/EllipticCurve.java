@@ -30,10 +30,11 @@ public class EllipticCurve {
             //BigInteger.valueOf(-3).mod(PRIME_P),
             // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
             sqrt(
-                    BigInteger.ONE.subtract(mult(G_x, G_x)) // (1 - x^2)
-                            .multiply( // ... / ( 1 + 39081*x^2 )
+                    mult(BigInteger.ONE.subtract(mult(G_x, G_x)), // (1 - x^2)
+                             // ... / ( 1 + 39081*x^2 )
                                 BigInteger.ONE.add(mult(G_x, G_x, BigInteger.valueOf(39081)))
-                                .modInverse(PRIME_P)),
+                                .modInverse(PRIME_P)
+                    ),
                     PRIME_P,
                     false
             ).mod(PRIME_P)
@@ -79,11 +80,11 @@ public class EllipticCurve {
             // (x_1 * y_1 + y_1 * x_2)
             var part1 = (mult(this.x, other.y)).add(mult(other.x, other.y));
             // (1 + d*x_1 * x_2 * y_1 * y_2)
-            var part2 = BigInteger.ONE.add(mult(x, other.x, y, other.y)).mod(PRIME_P);
+            var part2 = BigInteger.ONE.add(mult(D, x, other.x, y, other.y)).mod(PRIME_P);
             // (y_1 * y_2 - x_1 * x_2)
             var part3 = (mult(y, other.y)).subtract(mult(this.x, other.x)).mod(PRIME_P);
             // (1 - d*x_1 * x_2 * y_1 * y_2)
-            var part4 = BigInteger.ONE.subtract(mult(x, other.x, y, other.y)).mod(PRIME_P);
+            var part4 = BigInteger.ONE.subtract(mult(D, x, other.x, y, other.y)).mod(PRIME_P);
 
             BigInteger x = mult(part1, part2.modInverse(PRIME_P)); // division in modular arithmetic
             BigInteger y = mult(part3, part4.modInverse(PRIME_P));
