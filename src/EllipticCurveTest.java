@@ -54,6 +54,8 @@ public class EllipticCurveTest {
         EllipticCurve.GoldilocksPair negativeG = publicGenerator.opposite();
         EllipticCurve.GoldilocksPair result = publicGenerator.add(negativeG);
         Assertions.assertEquals(result, neutralElement);
+
+        Assertions.assertEquals(O, O.add(O.opposite()));
     }
 
     /**
@@ -64,7 +66,7 @@ public class EllipticCurveTest {
     @Test
     public void test_P() {
         var P = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
-        assert Arrays.equals(P.toByteArray(), PRIME_P.toByteArray());
+        assert Arrays.equals(P.toByteArray(), EllipticCurve.PRIME_P.toByteArray());
     }
     // (0, 1)
     static final EllipticCurve.GoldilocksPair O = EllipticCurve.neutralElement;
@@ -76,16 +78,20 @@ public class EllipticCurveTest {
             Assertions.assertEquals(G.opposite(), new EllipticCurve.GoldilocksPair(PRIME_P.subtract(G.x), G.y));
         }
 @Test
-        public void test_scalar_mult_zero() {
+        public void test_scalar_mult_Gzero() {
     //    0 ⋅ 𝐺 = O
     var U = G.exp(BigInteger.ZERO);
-
-    Assertions.assertEquals(U, O);
+    Assertions.assertEquals(O, U);
+}
+@Test
+public void test_scalar_mult_neutralZero() {
+    var U = O.exp(BigInteger.ZERO);
+    Assertions.assertEquals(O, U);
 }
 @Test
         public void test_scalar_mult_one() {
             //    1 ⋅ 𝐺 = 𝐺
-            Assertions.assertEquals(G.exp(BigInteger.ONE), G);
+            Assertions.assertEquals(G, G.exp(BigInteger.ONE));
         }
 @Test
         public void test_scalar_mult_two() {
@@ -105,7 +111,7 @@ public class EllipticCurveTest {
 @Test
         public void test_rG_equals_neutral() {
             //    𝑟 ⋅ 𝐺 = 𝑂
-            Assertions.assertEquals(G.exp(EllipticCurve.R), O);
+            Assertions.assertEquals(O, G.exp(EllipticCurve.R));
         }
     }
 
