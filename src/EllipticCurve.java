@@ -69,7 +69,7 @@ public class EllipticCurve {
 
         /**
          * Computing the sum of two goldilocks points below:
-         * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_1 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
+         * (x_1, y_1) + (x_2, y_2) = |(x_1 * y_2 + y_1 * x_2) [Part1]         (y_1* y_2 - x_1 * x_2)      [part3]  |
          *                           | ----------------------              ----------------------                  |
          *                           |(1 + d*x_1 * x_2 * y_1 * y_2) [Part2] , (1 - d*x_1 * x_2 * y_1 * y_2) [part4]|
          * Given 1st point (x_1, y_1) and 2nd point (x_2, y_2)
@@ -77,14 +77,16 @@ public class EllipticCurve {
          * @return Edward Curve addition of (x_1, y_1) + (x_2, y_2)
          */
         public GoldilocksPair add(GoldilocksPair other) {
-            // (x_1 * y_1 + y_1 * x_2)
-            var part1 = (mult(this.x, other.y)).add(mult(other.x, other.y));
+            // (x_1 * y_2 + y_1 * x_2)
+            var part1 = (mult(this.x, other.y)).add(mult(this.y, other.x));
             // (1 + d*x_1 * x_2 * y_1 * y_2)
-            var part2 = BigInteger.ONE.add(mult(D, x, other.x, y, other.y)).mod(PRIME_P);
+            var part2 = BigInteger.ONE.add(
+                    mult(D, this.x, other.x, this.y, other.y)).mod(PRIME_P);
             // (y_1 * y_2 - x_1 * x_2)
-            var part3 = (mult(y, other.y)).subtract(mult(this.x, other.x)).mod(PRIME_P);
+            var part3 = (mult(this.y, other.y)).subtract(mult(this.x, other.x)).mod(PRIME_P);
             // (1 - d*x_1 * x_2 * y_1 * y_2)
-            var part4 = BigInteger.ONE.subtract(mult(D, x, other.x, y, other.y)).mod(PRIME_P);
+            var part4 = BigInteger.ONE.subtract(
+                    mult(D, this.x, other.x, this.y, other.y)).mod(PRIME_P);
 
             BigInteger x = mult(part1, part2.modInverse(PRIME_P)); // division in modular arithmetic
             BigInteger y = mult(part3, part4.modInverse(PRIME_P));
@@ -101,8 +103,6 @@ public class EllipticCurve {
             return new GoldilocksPair(negX, this.y);
         }
 
-
-
         /**
          * Multiplication-by-scalar algorithm by invoking Edwards point addition formula
          * Note: exponentiation of a point, and scalar multiplication are equivalent.
@@ -111,8 +111,17 @@ public class EllipticCurve {
          * @return  V = s * P
          */
         public GoldilocksPair exp(BigInteger s) {
+            if(s.equals(BigInteger.ZERO)) return neutralElement; // edge case.
+
+            // see slide 40, TCSS 487 - 6. Asymmetric Cryptography and modular arithmetic
+            // for math pseudocode.
+            //------------
             GoldilocksPair V = this; // initialize V
-            for (int i = s.bitLength() - 1; i >= 0; i--) { // scan over the k bits of s
+            // search bits for the first s_k=1 to begin calculations with s_(k-1) ... s_0
+            int i = s.bitLength() - 1;
+            while(!s.testBit(i)) i--; // TODO: math-based O(1) solution for this, faster than O(k)?
+
+            for (i = i - 1; i >= 0; i--) { // scan over the k bits of s
                 V = V.add(V);//edwardsAddition(V.x, V.y, V.x, V.y);   // invoke edwards point addition
                 if (s.testBit(i)) {    // test i-th bit of s
                     V = V.add(this); //edwardsAddition(V.x, V.y, P.x, P.y);    // edwards point addition formula
