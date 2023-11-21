@@ -169,4 +169,18 @@ public class EllipticCurveTest {
         // A + (B + C) == (A + B) + C
         Assertions.assertEquals(B.add(C).add(A), A.add(B).add(C));
     }
+    @Test
+    public void test_add_2() {
+        for(int i = 0; i < 20; i++) {
+            var a = new BigInteger(244, 0, new SecureRandom());
+            var b = new BigInteger(244, 0, new SecureRandom());
+            var c = b;//PRIME_P.subtract(b.modPow(BigInteger.TEN, PRIME_P));
+
+            var A = new EllipticCurve.GoldilocksPair(a, EllipticCurve.f(a));
+            var B = new EllipticCurve.GoldilocksPair(b, EllipticCurve.f(b));
+            var C = new EllipticCurve.GoldilocksPair(c, EllipticCurve.f(c));
+            // A + (B + C) == (A + B) + C
+            Assertions.assertEquals(B.add(C).add(A), A.add(B).add(C));
+        }
+    }
 }
