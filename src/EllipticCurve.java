@@ -15,6 +15,53 @@ public class EllipticCurve {
     // 𝑟 = 2^446 − 13818066809895115352007386748515426880336692474882178609894547503885
     final static BigInteger R = (BigInteger.TWO).pow(446).subtract(
             new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
+
+    /**
+     * Generate a Schnorr Signature key pair from a passphrase pw:
+     *
+      */
+    public static KeyPair generateKeyPair(String passPhrase) {
+
+        // s <- KMACXOF256(pw, "", 448, "SK")
+        byte[] s = KMACXOF256.KMACXOF256(passPhrase.getBytes(), "".getBytes(), 448, "SK".getBytes());
+        BigInteger bigS = new BigInteger(s);
+
+        // x <- 4s(mod r); s is byte[], bytes multiply as a BigInteger?
+        bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
+        GoldilocksPair publicKey = G.exp(bigS);
+        KeyPair keypair = new KeyPair(bigS, publicKey);
+        return keypair;
+    }
+
+    static class KeyPair {
+        // Schnorr Signature creates key pair of signature and public key.
+        // DataStructure to contain the generated keypairs.
+
+        private GoldilocksPair publicKey;
+
+        private BigInteger signature;
+        public KeyPair(BigInteger signature, GoldilocksPair publicKey) {
+            this.signature = signature;
+            this.publicKey = publicKey;
+
+        }
+
+        public BigInteger getSignature() {
+            return this.signature;
+        }
+
+        public GoldilocksPair getPublicKey() {
+            return this.publicKey;
+        }
+
+        /**
+         * Returns a key pair as a (signature, goldilocksPair) format.
+         * @return String version of key pair as (signature value, goldilocksPair)
+         */
+        public String toString() {
+            return String.format("(%s, %s)", signature, publicKey);
+        }
+    }
     /**
      * Neutral element: O := (0, 1)
      * Neutral element has a point of (0, 1)
@@ -42,7 +89,6 @@ public class EllipticCurve {
 
     static class GoldilocksPair {
 
-        // constructor of neutral element
         final public BigInteger x;
         final public BigInteger y;
 
