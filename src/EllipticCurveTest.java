@@ -121,6 +121,7 @@ public class EllipticCurveTest {
     @Test
     public void test_rG_equals_neutral() {
         //    𝑟 ⋅ 𝐺 = 𝑂
+        System.out.println(PRIME_P.subtract(G.exp(EllipticCurve.R).x));
         Assertions.assertEquals(O, G.exp(EllipticCurve.R));
     }
 
@@ -128,14 +129,14 @@ public class EllipticCurveTest {
     @Test
     public void test_random_k_t_1() {
         //𝑘 ⋅ 𝐺 = (𝑘 mod 𝑟) ⋅ 𝐺
-        for(int i =0; i < 10; i++) {
+        for(int i =0; i < 20; i++) {
             var k = new BigInteger(244, 0, new SecureRandom());
             Assertions.assertEquals(G.exp(k), G.exp(k.mod(EllipticCurve.R)));
         }
     }
     @Test
     public void test_random_k_t_2() {
-        for(int i =0; i < 10; i++) {
+        for(int i =0; i < 20; i++) {
             var k = new BigInteger(244, 0, new SecureRandom());
             //(𝑘 + 1) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + 𝐺
             Assertions.assertEquals(G.exp(k.add(BigInteger.ONE)), G.exp(k).add(G));
@@ -143,12 +144,12 @@ public class EllipticCurveTest {
     }
     @Test
     public void test_random_k_t_3() {
-        for(int i =0; i < 10; i++) {
+        for(int i =0; i < 20; i++) {
             var k = new BigInteger(244, 0, new SecureRandom());
             var t = new BigInteger(244, 0, new SecureRandom());
             //(𝑘 + 𝑡) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + (𝑡 ⋅ 𝐺)
             Assertions.assertEquals(
-                    G.exp(k.add(BigInteger.ONE)),
+                    G.exp(k.add(t)),
                     G.exp(k).add(G.exp(t))
             );
 
