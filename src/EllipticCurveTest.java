@@ -157,4 +157,16 @@ public class EllipticCurveTest {
             //𝑘 ⋅ (𝑡 ⋅ 𝑃) = 𝑡 ⋅ (𝑘 ⋅ 𝐺) = (𝑘 ⋅ 𝑡 mod 𝑟) ⋅ 𝐺
         }
     }
+    @Test
+    public void test_add_1() {
+        var a = new BigInteger("-1");
+        var b = new BigInteger("45");
+        var c = PRIME_P.subtract(b.modPow(BigInteger.TEN, PRIME_P));
+
+        var A = new EllipticCurve.GoldilocksPair(a, EllipticCurve.f(a));
+        var B = new EllipticCurve.GoldilocksPair(b, EllipticCurve.f(b));
+        var C = new EllipticCurve.GoldilocksPair(c, EllipticCurve.f(c));
+        // A + (B + C) == (A + B) + C
+        Assertions.assertEquals(B.add(C).add(A), A.add(B).add(C));
+    }
 }
