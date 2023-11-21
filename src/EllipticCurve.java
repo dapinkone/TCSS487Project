@@ -25,11 +25,12 @@ public class EllipticCurve {
      * public generator G
      * x = -3 (mod p) and y = something
      **/
-    private static final BigInteger G_x = PRIME_P.subtract(BigInteger.valueOf(3));
-    public static final GoldilocksPair G = new GoldilocksPair( G_x,
+    private static final BigInteger G_y = PRIME_P.subtract(BigInteger.valueOf(3));
+    public static final GoldilocksPair G = new GoldilocksPair(
             //BigInteger.valueOf(-3).mod(PRIME_P),
             // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
-            f(G_x)
+            f(G_y),
+            G_y
     );
     public static BigInteger f(BigInteger x) {
         // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
@@ -91,6 +92,7 @@ public class EllipticCurve {
 
             // (x_1 * y_2 + y_1 * x_2)
             var part1 = (mult(x1, y2)).add(mult(y1, x2)).mod(PRIME_P);
+            //var part1 = x1.multiply(y2).add(y1.multiply(x2)).mod(PRIME_P);
             // (1 + d*x_1 * x_2 * y_1 * y_2)
             var part2 = BigInteger.ONE.add(mult(D, x1, x2, y1, y2)).mod(PRIME_P);
             // (y_1 * y_2 - x_1 * x_2)
