@@ -2,11 +2,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 public class EllipticCurveTest {
 
-//    EllipticCurve testCurve = new EllipticCurve();
+    //    EllipticCurve testCurve = new EllipticCurve();
     // constants
     final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
     private final EllipticCurve.GoldilocksPair publicGenerator = EllipticCurve.G;
@@ -29,7 +30,7 @@ public class EllipticCurveTest {
     @Test
     public void testSquareRootModsP() {
         EllipticCurve.GoldilocksPair pair = new EllipticCurve.GoldilocksPair(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P),
-                                                EllipticCurve.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P)));
+                EllipticCurve.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P)));
         // y value of a public generator of Elliptic Curve
         BigInteger yValue = EllipticCurve.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P));
         Assertions.assertNotEquals(yValue, null);
@@ -37,6 +38,7 @@ public class EllipticCurveTest {
         // y value that is guaranteed to not be negative
 
     }
+
     //
     @Test
     public void testNeutralElement() {
@@ -47,8 +49,7 @@ public class EllipticCurveTest {
      * Test G + (-G) = O
      * Test opposite & Edwards Addition
      * G = (x, y), then -G = (-x, y)
-     *
-      */
+     */
     @Test
     public void test_G_Plus_Negative_G() {
         EllipticCurve.GoldilocksPair negativeG = publicGenerator.opposite();
@@ -60,7 +61,7 @@ public class EllipticCurveTest {
 
     /**
      * Test Case: 0 * G = 0
-     *      Neutral Element * G = Neutral Element
+     * Neutral Element * G = Neutral Element
      */
 
     @Test
@@ -68,50 +69,91 @@ public class EllipticCurveTest {
         var P = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
         assert Arrays.equals(P.toByteArray(), EllipticCurve.PRIME_P.toByteArray());
     }
+
     // (0, 1)
     static final EllipticCurve.GoldilocksPair O = EllipticCurve.neutralElement;
     // ( -3 mod P, sqrt((1 − x^2)/(1 + 39081x^2)) mod P.
     static final EllipticCurve.GoldilocksPair G = EllipticCurve.G;
-        @Test
-        public void test_opposite() {
-            // −𝐺 = (𝑝 − 𝑥, 𝑦)
-            Assertions.assertEquals(G.opposite(), new EllipticCurve.GoldilocksPair(PRIME_P.subtract(G.x), G.y));
-        }
-@Test
-        public void test_scalar_mult_Gzero() {
-    //    0 ⋅ 𝐺 = O
-    var U = G.exp(BigInteger.ZERO);
-    Assertions.assertEquals(O, U);
-}
-@Test
-public void test_scalar_mult_neutralZero() {
-    var U = O.exp(BigInteger.ZERO);
-    Assertions.assertEquals(O, U);
-}
-@Test
-        public void test_scalar_mult_one() {
-            //    1 ⋅ 𝐺 = 𝐺
-            Assertions.assertEquals(G, G.exp(BigInteger.ONE));
-        }
-@Test
-        public void test_scalar_mult_two() {
-            //    2 ⋅ 𝐺 = 𝐺 + 𝐺
-            Assertions.assertEquals(G.exp(BigInteger.TWO), G.add(G));
-        }
-@Test
-        public void test_exp_4_equals_22G() {
-            //    4 ⋅ 𝐺 = 2 ⋅ (2 ⋅ 𝐺)
-            Assertions.assertEquals(G.exp(BigInteger.valueOf(4)), G.exp(BigInteger.TWO).exp(BigInteger.TWO));
-        }
-@Test
-        public void test_4G_ne_neutral() {
-            //     4 ⋅ 𝐺 ≠ 𝑂
-            Assertions.assertNotEquals(G.exp(BigInteger.valueOf(4)), O);
-        }
-@Test
-        public void test_rG_equals_neutral() {
-            //    𝑟 ⋅ 𝐺 = 𝑂
-            Assertions.assertEquals(O, G.exp(EllipticCurve.R));
-        }
+
+    @Test
+    public void test_opposite() {
+        // −𝐺 = (𝑝 − 𝑥, 𝑦)
+        Assertions.assertEquals(G.opposite(), new EllipticCurve.GoldilocksPair(PRIME_P.subtract(G.x), G.y));
     }
 
+    @Test
+    public void test_scalar_mult_Gzero() {
+        //    0 ⋅ 𝐺 = O
+        var U = G.exp(BigInteger.ZERO);
+        Assertions.assertEquals(O, U);
+    }
+
+    @Test
+    public void test_scalar_mult_neutralZero() {
+        var U = O.exp(BigInteger.ZERO);
+        Assertions.assertEquals(O, U);
+    }
+
+    @Test
+    public void test_scalar_mult_one() {
+        //    1 ⋅ 𝐺 = 𝐺
+        Assertions.assertEquals(G, G.exp(BigInteger.ONE));
+    }
+
+    @Test
+    public void test_scalar_mult_two() {
+        //    2 ⋅ 𝐺 = 𝐺 + 𝐺
+        Assertions.assertEquals(G.exp(BigInteger.TWO), G.add(G));
+    }
+
+    @Test
+    public void test_exp_4_equals_22G() {
+        //    4 ⋅ 𝐺 = 2 ⋅ (2 ⋅ 𝐺)
+        Assertions.assertEquals(G.exp(BigInteger.valueOf(4)), G.exp(BigInteger.TWO).exp(BigInteger.TWO));
+    }
+
+    @Test
+    public void test_4G_ne_neutral() {
+        //     4 ⋅ 𝐺 ≠ 𝑂
+        Assertions.assertNotEquals(G.exp(BigInteger.valueOf(4)), O);
+    }
+
+    @Test
+    public void test_rG_equals_neutral() {
+        //    𝑟 ⋅ 𝐺 = 𝑂
+        Assertions.assertEquals(O, G.exp(EllipticCurve.R));
+    }
+
+
+    @Test
+    public void test_random_k_t_1() {
+        //𝑘 ⋅ 𝐺 = (𝑘 mod 𝑟) ⋅ 𝐺
+        for(int i =0; i < 10; i++) {
+            var k = new BigInteger(244, 0, new SecureRandom());
+            Assertions.assertEquals(G.exp(k), G.exp(k.mod(EllipticCurve.R)));
+        }
+    }
+    @Test
+    public void test_random_k_t_2() {
+        for(int i =0; i < 10; i++) {
+            var k = new BigInteger(244, 0, new SecureRandom());
+            //(𝑘 + 1) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + 𝐺
+            Assertions.assertEquals(G.exp(k.add(BigInteger.ONE)), G.exp(k).add(G));
+        }
+    }
+    @Test
+    public void test_random_k_t_3() {
+        for(int i =0; i < 10; i++) {
+            var k = new BigInteger(244, 0, new SecureRandom());
+            var t = new BigInteger(244, 0, new SecureRandom());
+            //(𝑘 + 𝑡) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + (𝑡 ⋅ 𝐺)
+            Assertions.assertEquals(
+                    G.exp(k.add(BigInteger.ONE)),
+                    G.exp(k).add(G.exp(t))
+            );
+
+            // TODO: what does P represent here? a random point?
+            //𝑘 ⋅ (𝑡 ⋅ 𝑃) = 𝑡 ⋅ (𝑘 ⋅ 𝐺) = (𝑘 ⋅ 𝑡 mod 𝑟) ⋅ 𝐺
+        }
+    }
+}
