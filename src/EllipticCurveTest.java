@@ -171,16 +171,21 @@ public class EllipticCurveTest {
     }
     @Test
     public void test_add_2() {
+        // (𝑘 ⋅ 𝐺) + ((ℓ ⋅ 𝐺) + (𝑚 ⋅ 𝐺)) = ((𝑘 ⋅ 𝐺) + (ℓ ⋅ 𝐺)) + (𝑚 ⋅ 𝐺)
+        var rand = new SecureRandom();
+        var N = PRIME_P.bitLength();
         for(int i = 0; i < 20; i++) {
-            var a = new BigInteger(244, 0, new SecureRandom());
-            var b = new BigInteger(244, 0, new SecureRandom());
-            var c = b;//PRIME_P.subtract(b.modPow(BigInteger.TEN, PRIME_P));
+            var k = new BigInteger(N, 0, rand);
+            var l = new BigInteger(N, 0, rand);
+            var m = new BigInteger(N, 0, rand);
 
-            var A = new EllipticCurve.GoldilocksPair(a, EllipticCurve.f(a));
-            var B = new EllipticCurve.GoldilocksPair(b, EllipticCurve.f(b));
-            var C = new EllipticCurve.GoldilocksPair(c, EllipticCurve.f(c));
+            var L = G.exp(l);
+            var M = G.exp(m);
+            var K = G.exp(k);
             // A + (B + C) == (A + B) + C
-            Assertions.assertEquals(B.add(C).add(A), A.add(B).add(C));
+            Assertions.assertEquals(
+                    K.add(L.add(M)), // K + (L + M)
+                            (K.add(L)).add(M)); // (K + L) + M
         }
     }
 }
