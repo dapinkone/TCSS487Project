@@ -1,4 +1,5 @@
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Arrays;
 
 public class EllipticCurve {
@@ -6,6 +7,7 @@ public class EllipticCurve {
     // data structure to represent goldilocks pair (x, y)
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
 
+    public static final int NUMBER_OF_BITS = 448;
     private final static BigInteger D = new BigInteger("-39081");
     // P := 2^448 − 2^224 − 1
     final static BigInteger PRIME_P = (
@@ -34,9 +36,63 @@ public class EllipticCurve {
         return keypair;
     }
 
+    /**
+     * Currently uses 448 as number of bits in this function.
+     * @return
+     */
+    private static byte[] randomBytes() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[NUMBER_OF_BITS / 8];
+        random.nextBytes(bytes);
+        return bytes;
+    }
+    /**
+     * Encrypts a byte array m, under the (Schnorr/DHIES) public key
+     *
+     * @param m
+     * @param V
+     * @return
+     */
+    public static byte[] encrypt(byte[] m, GoldilocksPair V) {
+        byte[] result = new byte[0];
+        // k <- Random(448);
+        byte[] k = randomBytes();
+        // k <- 4k (mod r)
+        BigInteger bigK = new BigInteger(k);
+        bigK = (BigInteger.valueOf(4)).multiply(bigK).mod(R);
+
+        // W <- k *V;
+        GoldilocksPair W = V.exp(bigK);
+        // Z <- k*G
+        GoldilocksPair Z = G.exp(bigK);
+
+        // (ka || ke) <- KMACXOF256(W_x, "", 2 * 448, "PK")
+        byte[] ke_ka = KMACXOF256.KMACXOF256(
+                W.x.toByteArray(),
+                "".getBytes(),
+                NUMBER_OF_BITS * 2,
+                "PK".getBytes());
+
+        // split (ka || ke) a (448 * 2) long bits into 448 bits (56 bytes in length)
+        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 56); //
+        byte[] ka = Arrays.copyOfRange(ke_ka, 56, 112);
+
+        // c <- KMACXOF256(ke, "", |m|, "PKE") xor m
+        byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
+        KMACXOF256.xor(c, m);
+        // t <- KMACXOF256(ka, m, 448, "PKA")
+        var t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
+        // cryptogram : (Z, c, t)
+        // TODO: In a cryptogram is appending Z, c, and together, which value of the Goldilocks Point
+        //      is appended with c and t?
+//        byte[] cyrptogram = KMACXOF256.appendBytes(Z, c, t)
+        return result; // TODO: Update the return value with an actually computed value
+    }
     static class KeyPair {
-        // Schnorr Signature creates key pair of signature and public key.
-        // DataStructure to contain the generated keypairs.
+        /**
+         * Schnorr Signature creates key pair of signature and public key.
+         * DataStructure to contain the generated keypairs.
+         */
 
         private GoldilocksPair publicKey;
 
