@@ -6,7 +6,6 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 
 public class EllipticCurveTest {
-
     //    EllipticCurve testCurve = new EllipticCurve();
     // constants
     final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
@@ -14,6 +13,9 @@ public class EllipticCurveTest {
     // Neutral element: O := (0, 1)
     private final EllipticCurve.GoldilocksPair neutralElement = new EllipticCurve.GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
+
+    final static int sample_size = 50; // number of samples we take for randomized testing.
+    final static int N = PRIME_P.bitLength(); // maximum bitlength of our randomly gen'd numbers.
     // TODO:
     @Test
     public void testGoldilocksConstructor() {
@@ -129,24 +131,26 @@ public class EllipticCurveTest {
     @Test
     public void test_random_k_t_1() {
         //𝑘 ⋅ 𝐺 = (𝑘 mod 𝑟) ⋅ 𝐺
-        for(int i =0; i < 20; i++) {
-            var k = new BigInteger(244, 0, new SecureRandom());
+        for(int i =0; i < sample_size; i++) {
+            var k = new BigInteger(N, 0, new SecureRandom());
             Assertions.assertEquals(G.exp(k), G.exp(k.mod(EllipticCurve.R)));
         }
     }
     @Test
     public void test_random_k_t_2() {
-        for(int i =0; i < 20; i++) {
-            var k = new BigInteger(244, 0, new SecureRandom());
+        var rand = new SecureRandom();
+        for(int i =0; i < sample_size; i++) {
+            var k = new BigInteger(N, 0, rand);
             //(𝑘 + 1) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + 𝐺
             Assertions.assertEquals(G.exp(k.add(BigInteger.ONE)), G.exp(k).add(G));
         }
     }
     @Test
     public void test_random_k_t_3() {
-        for(int i =0; i < 20; i++) {
-            var k = new BigInteger(244, 0, new SecureRandom());
-            var t = new BigInteger(244, 0, new SecureRandom());
+        var rand = new SecureRandom();
+        for(int i =0; i < sample_size; i++) {
+            var k = new BigInteger(N, 0, rand);
+            var t = new BigInteger(N, 0, rand);
             //(𝑘 + 𝑡) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + (𝑡 ⋅ 𝐺)
             Assertions.assertEquals(
                     G.exp(k.add(t)),
@@ -155,6 +159,37 @@ public class EllipticCurveTest {
 
             // TODO: what does P represent here? a random point?
             //𝑘 ⋅ (𝑡 ⋅ 𝑃) = 𝑡 ⋅ (𝑘 ⋅ 𝐺) = (𝑘 ⋅ 𝑡 mod 𝑟) ⋅ 𝐺
+        }
+    }
+    @Test
+    public void test_add_1() {
+        var a = new BigInteger("-1");
+        var b = new BigInteger("45");
+        var c = PRIME_P.subtract(b.modPow(BigInteger.TEN, PRIME_P));
+
+        var A = new EllipticCurve.GoldilocksPair(a, EllipticCurve.f(a));
+        var B = new EllipticCurve.GoldilocksPair(b, EllipticCurve.f(b));
+        var C = new EllipticCurve.GoldilocksPair(c, EllipticCurve.f(c));
+        // A + (B + C) == (A + B) + C
+        Assertions.assertEquals(B.add(C).add(A), A.add(B).add(C));
+    }
+    @Test
+    public void test_add_2() {
+        // (𝑘 ⋅ 𝐺) + ((ℓ ⋅ 𝐺) + (𝑚 ⋅ 𝐺)) = ((𝑘 ⋅ 𝐺) + (ℓ ⋅ 𝐺)) + (𝑚 ⋅ 𝐺)
+        var rand = new SecureRandom();
+
+        for(int i = 0; i < sample_size; i++) {
+            var k = new BigInteger(N, 0, rand);
+            var l = new BigInteger(N, 0, rand);
+            var m = new BigInteger(N, 0, rand);
+
+            var L = G.exp(l);
+            var M = G.exp(m);
+            var K = G.exp(k);
+            // A + (B + C) == (A + B) + C
+            Assertions.assertEquals(
+                    K.add(L.add(M)), // K + (L + M)
+                            (K.add(L)).add(M)); // (K + L) + M
         }
     }
 }
