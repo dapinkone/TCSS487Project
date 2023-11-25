@@ -1,6 +1,9 @@
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import static java.math.BigInteger.ONE;
+import static java.math.BigInteger.TWO;
+
 public class EllipticCurve {
 
     // data structure to represent goldilocks pair (x, y)
@@ -9,18 +12,18 @@ public class EllipticCurve {
     private final static BigInteger D = new BigInteger("-39081");
     // P := 2^448 − 2^224 − 1
     final static BigInteger PRIME_P = (
-            BigInteger.TWO.pow(448) // 2^448
-                    .subtract(BigInteger.TWO.pow(224)) // - 2^224
-                    .subtract(BigInteger.ONE)); // - 1
+            TWO.pow(448) // 2^448
+                    .subtract(TWO.pow(224)) // - 2^224
+                    .subtract(ONE)); // - 1
 
     // 𝑟 = 2^446 − 13818066809895115352007386748515426880336692474882178609894547503885
-    final static BigInteger R = (BigInteger.TWO).pow(446).subtract(
+    final static BigInteger R = (TWO).pow(446).subtract(
             new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
     /**
      * Neutral element: O := (0, 1)
      * Neutral element has a point of (0, 1)
      */
-    public static final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
+    public static final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, ONE);
 
     /**
      * public generator G
@@ -39,9 +42,9 @@ public class EllipticCurve {
     public static BigInteger f(BigInteger x, boolean lsb) { // formula is symmetrical. x or y are interchangeable.
         // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
         return sqrt(
-                mult(BigInteger.ONE.subtract(mult(x, x)), // (1 - x^2)
+                mult(ONE.subtract(mult(x, x)), // (1 - x^2)
                         // ... / ( 1 + 39081*x^2 )
-                        BigInteger.ONE.add(mult(x, x, BigInteger.valueOf(39081)))
+                        ONE.add(mult(x, x, BigInteger.valueOf(39081)))
                                 .modInverse(PRIME_P)
                 ),
                 PRIME_P,
@@ -100,11 +103,11 @@ public class EllipticCurve {
             var part1 = (mult(x1, y2)).add(mult(y1, x2)).mod(PRIME_P);
             var d_x1_x2_y1_y2 = mult(D, x1, x2, y1, y2);
             // (1 + d*x_1 * x_2 * y_1 * y_2)
-            var part2 = BigInteger.ONE.add(d_x1_x2_y1_y2).mod(PRIME_P);
+            var part2 = ONE.add(d_x1_x2_y1_y2).mod(PRIME_P);
             // (y_1 * y_2 - x_1 * x_2)
             var part3 = (mult(y1, y2)).subtract(mult(x1, x2)).mod(PRIME_P);
             // (1 - d*x_1 * x_2 * y_1 * y_2)
-            var part4 = BigInteger.ONE.subtract(d_x1_x2_y1_y2).mod(PRIME_P);
+            var part4 = ONE.subtract(d_x1_x2_y1_y2).mod(PRIME_P);
 
             BigInteger x = mult(part1, part2.modInverse(PRIME_P)); // division in modular arithmetic
             BigInteger y = mult(part3, part4.modInverse(PRIME_P));
@@ -119,7 +122,7 @@ public class EllipticCurve {
          */
         public GoldilocksPair opposite() {
             // -x == x * (P - 1)
-            var negX = this.x.multiply(PRIME_P.subtract(BigInteger.ONE)).mod(PRIME_P);
+            var negX = this.x.multiply(PRIME_P.subtract(ONE)).mod(PRIME_P);
             return new GoldilocksPair(negX, this.y);
         }
 
@@ -153,12 +156,12 @@ public class EllipticCurve {
      * @return result mod PRIME_P
      */
     private static BigInteger mult(BigInteger ...lst) {
-        var result = BigInteger.ONE;
+        var result = ONE;
 
         for(var x : lst) {
             result = ( x != null ) ? result.multiply(x).mod(PRIME_P) : result;
         }
-        return result; // 39s
+        return result; // 36.489s pre-karatsuba
     }
     /**
      * Compute a square root of v mod p with a specified least-significant bit
@@ -175,7 +178,7 @@ public class EllipticCurve {
         if (v.signum() == 0) {
             return BigInteger.ZERO;
         }
-        BigInteger r = v.modPow(p.shiftRight(2).add(BigInteger.ONE), p);
+        BigInteger r = v.modPow(p.shiftRight(2).add(ONE), p);
         if (r.testBit(0) != lsb) {
             r = p.subtract(r); // correct the lsb
         }
@@ -198,8 +201,8 @@ public class EllipticCurve {
         BigInteger[] possibleY_0 = new BigInteger[2];
         BigInteger yValue;
 
-        BigInteger firstPart = BigInteger.ONE.subtract(mult(x, x)).mod(PRIME_P);
-        BigInteger secondPart = BigInteger.ONE.add(mult(BigInteger.valueOf(39081), mult(x, x))).mod(PRIME_P);
+        BigInteger firstPart = ONE.subtract(mult(x, x)).mod(PRIME_P);
+        BigInteger secondPart = ONE.add(mult(BigInteger.valueOf(39081), mult(x, x))).mod(PRIME_P);
         BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
 
         BigInteger firstPossibleY_0 = sqrt(result, PRIME_P, true);
