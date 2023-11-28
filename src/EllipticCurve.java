@@ -98,7 +98,6 @@ public class EllipticCurve {
 
     /**
      * Helper method used in encrypt method.
-     * TODO: Method is broken. It returns a byte representation of an int.
      * @param byteArray
      * @return Length of Byte Array into byte
      */
