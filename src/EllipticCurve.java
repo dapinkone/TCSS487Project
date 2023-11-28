@@ -57,6 +57,7 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] encrypt(byte[] m, GoldilocksPair V) {
+        byte[][] result = new byte[4][256];
         // k <- Random(448);
         byte[] k = randomBytes();
         // k <- 4k (mod r)
@@ -83,12 +84,39 @@ public class EllipticCurve {
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
         KMACXOF256.xor(c, m);
         // t <- KMACXOF256(ka, m, 448, "PKA")
-        var t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
+        byte[] t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
 
         // cryptogram : (Z, c, t)
-        return KMACXOF256.appendBytes(f(G_y, false).toByteArray(), G_y.toByteArray() , c, t);
+        // TODO: Replace the filler G_y with an actual value
+        return KMACXOF256.appendBytes(f(Z.y, false).toByteArray(), Z.y.toByteArray() , c, t);
+        // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
 
+    /**
+     * We want to decrypt the zct[] message, and we want to know the indices of x and y coordinate.
+     *
+     * @param zct
+     * @param pw
+     * @return
+     */
+    public static byte[] decrypt(byte[] zct, byte[] pw) {
+        byte[] result = new byte[0];
+        // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
+        // byte[] z_x
+        // byte[] z_y
+        // byte[] c
+        // byte[] t
+        // 1. s <- KMACXOF256(pw, "", 448, "SK")
+        byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
+        // 2. s <- 4s mod r
+        BigInteger bigS = new BigInteger(s);
+        bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
+        GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
+
+        // 3. W <- s*Z
+
+        return result;
+    }
     static class KeyPair {
         /**
          * Schnorr Signature creates key pair of signature and public key.
@@ -128,7 +156,7 @@ public class EllipticCurve {
 
     /**
      * public generator G
-     * x = -3 (mod p) and y = something
+     * y = -3 (mod p) and x = something
      **/
     private static final BigInteger G_y = PRIME_P.subtract(BigInteger.valueOf(3));
     public static final GoldilocksPair G = new GoldilocksPair(
