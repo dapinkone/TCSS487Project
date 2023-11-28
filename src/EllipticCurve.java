@@ -57,7 +57,6 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] encrypt(byte[] m, GoldilocksPair V) {
-        byte[] result = new byte[0];
         // k <- Random(448);
         byte[] k = randomBytes();
         // k <- 4k (mod r)
@@ -85,11 +84,13 @@ public class EllipticCurve {
         KMACXOF256.xor(c, m);
         // t <- KMACXOF256(ka, m, 448, "PKA")
         var t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
+
         // cryptogram : (Z, c, t)
-        // TODO: In a cryptogram is appending Z, c, and together, which value of the Goldilocks Point
-        //      is appended with c and t?
-//        byte[] cyrptogram = KMACXOF256.appendBytes(Z, c, t)
-        return result; // TODO: Update the return value with an actually computed value
+        return KMACXOF256.appendBytes(f(G_y, false).toByteArray(), G_y.toByteArray() , c, t);
+    }
+
+    public static byte[] decrypt(byte[] zct, byte[] pw) {
+
     }
     static class KeyPair {
         /**
