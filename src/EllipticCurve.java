@@ -1,4 +1,5 @@
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -83,15 +84,29 @@ public class EllipticCurve {
         // c <- KMACXOF256(ke, "", |m|, "PKE") xor m
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
         KMACXOF256.xor(c, m);
+        // append (c.length || c) appendBytes(new byte[]{(byte) xLength}, c)
+        byte[] leftEncodedC = KMACXOF256.appendBytes(byteArrayLength(c) ,c);
         // t <- KMACXOF256(ka, m, 448, "PKA")
         byte[] t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
+        // append (t.length || t)
+        byte[] leftEncodedT = KMACXOF256.appendBytes(byteArrayLength(t), t);
 
-        // cryptogram : (Z, c, t)
-        // TODO: Replace the filler G_y with an actual value
-        return KMACXOF256.appendBytes(f(Z.y, false).toByteArray(), Z.y.toByteArray() , c, t);
+        // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
+        return KMACXOF256.appendBytes( KMACXOF256.leftEncode(Z.y) , leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
 
+    /**
+     * Helper method used in encrypt method.
+     * TODO: Method is broken. It returns a byte representation of an int.
+     * @param byteArray
+     * @return Length of Byte Array into byte
+     */
+    private static byte[] byteArrayLength(byte[] byteArray) {
+        byte[] result = new byte[1];
+        result[0] = (byte) byteArray.length;
+        return result;
+    }
     /**
      * We want to decrypt the zct[] message, and we want to know the indices of x and y coordinate.
      *
@@ -103,9 +118,9 @@ public class EllipticCurve {
         byte[] result = new byte[0];
         // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
         // byte[] z_x
-        // byte[] z_y
-        // byte[] c
-        // byte[] t
+        byte[] z_y = Arrays.copyOfRange(zct, 1, zct[0]+ 1); // length of z_y is encoded at 0th index
+        // byte[] c = (zct, zct[0] + x, end)
+        // byte[] t = (zct, start, zct.length)
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
         // 2. s <- 4s mod r
