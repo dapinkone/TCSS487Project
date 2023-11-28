@@ -89,9 +89,6 @@ public class EllipticCurve {
         return KMACXOF256.appendBytes(f(G_y, false).toByteArray(), G_y.toByteArray() , c, t);
     }
 
-    public static byte[] decrypt(byte[] zct, byte[] pw) {
-
-    }
     static class KeyPair {
         /**
          * Schnorr Signature creates key pair of signature and public key.
