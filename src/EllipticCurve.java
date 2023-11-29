@@ -96,16 +96,6 @@ public class EllipticCurve {
     }
 
     /**
-     * Helper method used in encrypt method.
-     * @param byteArray
-     * @return Length of Byte Array into byte
-     */
-    private static byte[] byteArrayLength(byte[] byteArray) {
-        byte[] result = new byte[1];
-        result[0] = (byte) byteArray.length;
-        return result;
-    }
-    /**
      * We want to decrypt the zct[] message, and we want to know the indices of x and y coordinate.
      *
      * @param zct
