@@ -9,7 +9,7 @@ public class EllipticCurve {
     static final SecureRandom RAND = new SecureRandom();
     // data structure to represent goldilocks pair (x, y)
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
-    public static final int NUMBER_OF_BITS = 448;
+//    public static final int NUMBER_OF_BITS = 448;
     private final static BigInteger D = new BigInteger("-39081");
     // P := 2^448 − 2^224 − 1
     final static BigInteger PRIME_P = (
@@ -44,7 +44,7 @@ public class EllipticCurve {
      */
     private static byte[] randomBytes() {
         SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[NUMBER_OF_BITS / 8];
+        byte[] bytes = new byte[448 / 8];
         random.nextBytes(bytes);
         return bytes;
     }
@@ -57,7 +57,7 @@ public class EllipticCurve {
      */
     public static byte[] encrypt(byte[] m, GoldilocksPair V) {
         // k <- Random(448);
-        BigInteger k = new BigInteger(NUMBER_OF_BITS, RAND)
+        BigInteger k = new BigInteger(448, RAND)
                 // k <- 4k (mod r)
                 .shiftLeft(2).mod(R);
 
@@ -70,7 +70,7 @@ public class EllipticCurve {
         byte[] ka_ke = KMACXOF256.KMACXOF256(
                 W.x.toByteArray(),
                 "".getBytes(),
-                NUMBER_OF_BITS * 2,
+                448 * 2,
                 "PK".getBytes());
 
         // split (ka || ke) a (448 * 2) long bits into 448 bits (56 bytes in length)
@@ -83,7 +83,7 @@ public class EllipticCurve {
         // append (c.length || c) appendBytes(new byte[]{(byte) xLength}, c)
         byte[] leftEncodedC = KMACXOF256.left_encode(c);
         // t <- KMACXOF256(ka, m, 448, "PKA")
-        byte[] t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
+        byte[] t = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
         // append (t.length || t)
         byte[] leftEncodedT = KMACXOF256.left_encode(t);
 
@@ -125,7 +125,7 @@ public class EllipticCurve {
         GoldilocksPair W = Z.exp(bigS);
 
         // 4. (ka || ke) <- KMACXOF256(W_x, "", 2 x 448, "PK")
-        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2 * NUMBER_OF_BITS, "PK".getBytes());
+        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2 * 448, "PK".getBytes());
         // 4. (ka || ke) <- KMACXOF256(Wx, “”, 2×448, “PK”)
         byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);

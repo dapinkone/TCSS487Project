@@ -6,7 +6,7 @@ import static java.lang.Math.min;
 
 public class KMACXOF256 {
 
-    public static final int NUMBER_OF_BITS = 512; // 64 bytes = 512 bits
+//    public static final int NUMBER_OF_BITS = 512; // 64 bytes = 512 bits
 
     // basic operations & functions from FIPS 202
     public static byte[] xor(byte[] X, byte[] Y) {
@@ -247,7 +247,7 @@ public class KMACXOF256 {
 
     private static byte[] randomBytes() {
         SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[NUMBER_OF_BITS / 8]; // 8 bits = 1 byte
+        byte[] bytes = new byte[512 / 8]; // 8 bits = 1 byte
         random.nextBytes(bytes);
         return bytes;
     }
@@ -271,7 +271,7 @@ public class KMACXOF256 {
         xor(c, m);
 
         // t <- KMACXOF256(ka, m , 512, "SKA")
-        var t =  KMACXOF256(ka, m, NUMBER_OF_BITS, "SKA".getBytes());
+        var t =  KMACXOF256(ka, m, 512, "SKA".getBytes());
 
         // symmetric cyrptogram: (z, c, t)
         byte[] symmetricCryptogram = appendBytes(z, c, t);
