@@ -7,7 +7,7 @@ import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TWO;
 
 public class EllipticCurve {
-
+    static final SecureRandom RAND = new SecureRandom();
     // data structure to represent goldilocks pair (x, y)
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
 
@@ -60,15 +60,14 @@ public class EllipticCurve {
     public static byte[] encrypt(byte[] m, GoldilocksPair V) {
         byte[][] result = new byte[4][256];
         // k <- Random(448);
-        byte[] k = randomBytes();
-        // k <- 4k (mod r)
-        BigInteger bigK = new BigInteger(k);
-        bigK = (BigInteger.valueOf(4)).multiply(bigK).mod(R);
+        BigInteger k = new BigInteger(NUMBER_OF_BITS, RAND)
+                // k <- 4k (mod r)
+                .shiftLeft(2).mod(R);
 
         // W <- k *V;
-        GoldilocksPair W = V.exp(bigK);
+        GoldilocksPair W = V.exp(k);
         // Z <- k*G
-        GoldilocksPair Z = G.exp(bigK);
+        GoldilocksPair Z = G.exp(k);
 
         // (ka || ke) <- KMACXOF256(W_x, "", 2 * 448, "PK")
         byte[] ke_ka = KMACXOF256.KMACXOF256(
@@ -85,14 +84,14 @@ public class EllipticCurve {
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
         KMACXOF256.xor(c, m);
         // append (c.length || c) appendBytes(new byte[]{(byte) xLength}, c)
-        byte[] leftEncodedC = KMACXOF256.appendBytes(byteArrayLength(c) ,c);
+        byte[] leftEncodedC = KMACXOF256.left_encode(c);
         // t <- KMACXOF256(ka, m, 448, "PKA")
         byte[] t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
         // append (t.length || t)
-        byte[] leftEncodedT = KMACXOF256.appendBytes(byteArrayLength(t), t);
+        byte[] leftEncodedT = KMACXOF256.left_encode(t);
 
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
-        return KMACXOF256.appendBytes( KMACXOF256.leftEncode(Z.y) , leftEncodedC, leftEncodedT);
+        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.y) , leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
 
