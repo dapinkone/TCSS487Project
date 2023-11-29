@@ -2,7 +2,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
-
 import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TWO;
 
@@ -96,29 +95,54 @@ public class EllipticCurve {
     }
 
     /**
-     * We want to decrypt the zct[] message, and we want to know the indices of x and y coordinate.
+     * Decrypt the zct[] message under a passphrase pw
      *
-     * @param zct
-     * @param pw
+     * @param zct given cryptogram
+     * @param pw passphrase
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        byte[] result = new byte[0];
+        //byte[] result = new byte[0];
         // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
+        // TODO: possible rewrite using a left_decode() function?
         // byte[] z_x
-        byte[] z_y = Arrays.copyOfRange(zct, 1, zct[0]+ 1); // length of z_y is encoded at 0th index
-        // byte[] c = (zct, zct[0] + x, end)
-        // byte[] t = (zct, start, zct.length)
+        // length of z_y is encoded at 0th index
+        int y_len = zct[0] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+        byte[] z_y = Arrays.copyOfRange(zct, 1, y_len + 1);
+        // TODO: (re?)store x_lsb ?
+        var Z = new EllipticCurve.GoldilocksPair(false, new BigInteger(z_y));
+
+        int c_len = zct[y_len + 1] & 0xFF;
+        byte[] c = Arrays.copyOfRange(zct, y_len + 1, y_len + 1 + c_len);
+
+        int t_len = zct[y_len + 1 + c_len] & 0xFF;
+        byte[] t = Arrays.copyOfRange(zct, y_len + 1 + c_len, y_len + 1 + c_len + t_len);
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
+
         // 2. s <- 4s mod r
-        BigInteger bigS = new BigInteger(s);
-        bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
-        GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
+        BigInteger bigS = new BigInteger(s).shiftLeft(2).mod(R);
+        //GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
 
         // 3. W <- s*Z
+        var W = Z.exp(bigS);
+        // 4. (ka || ke) <- KMACXOF256(Wx, “”, 2×448, “PK”)
+        var ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2*448, "PK".getBytes());
+        byte[] ka = Arrays.copyOfRange(ka_ke, 0, 64);
+        byte[] ke = Arrays.copyOfRange(ka_ke, 64, 128);
 
-        return result;
+        // 5. m <- KMACXOF256(ke, “”, |c|, “PKE”)  c
+        var m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length, "PKE".getBytes());
+
+        // 6. t’ <- KMACXOF256(ka, m, 448, “PKA”)
+        var tPrime = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
+
+        // 7. accept if, and only if, t’ = t
+        if (Arrays.equals(tPrime, t)) {
+            return m;
+        } else {
+            throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
+        }
     }
     static class KeyPair {
         /**
