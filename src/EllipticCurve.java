@@ -1,5 +1,4 @@
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -7,10 +6,9 @@ import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TWO;
 
 public class EllipticCurve {
-
+    static final SecureRandom RAND = new SecureRandom();
     // data structure to represent goldilocks pair (x, y)
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
-
     public static final int NUMBER_OF_BITS = 448;
     private final static BigInteger D = new BigInteger("-39081");
     // P := 2^448 − 2^224 − 1
@@ -27,10 +25,10 @@ public class EllipticCurve {
      * Generate a Schnorr Signature key pair from a passphrase pw:
      *
       */
-    public static KeyPair generateKeyPair(String passPhrase) {
+    public static KeyPair generateKeyPair(String pw) {
 
         // s <- KMACXOF256(pw, "", 448, "SK")
-        byte[] s = KMACXOF256.KMACXOF256(passPhrase.getBytes(), "".getBytes(), 448, "SK".getBytes());
+        byte[] s = KMACXOF256.KMACXOF256(pw.getBytes(), "".getBytes(), 448, "SK".getBytes());
         BigInteger bigS = new BigInteger(s);
 
         // x <- 4s(mod r); s is byte[], bytes multiply as a BigInteger?
@@ -60,15 +58,14 @@ public class EllipticCurve {
     public static byte[] encrypt(byte[] m, GoldilocksPair V) {
         byte[][] result = new byte[4][256];
         // k <- Random(448);
-        byte[] k = randomBytes();
-        // k <- 4k (mod r)
-        BigInteger bigK = new BigInteger(k);
-        bigK = (BigInteger.valueOf(4)).multiply(bigK).mod(R);
+        BigInteger k = new BigInteger(NUMBER_OF_BITS, RAND)
+                // k <- 4k (mod r)
+                .shiftLeft(2).mod(R);
 
         // W <- k *V;
-        GoldilocksPair W = V.exp(bigK);
+        GoldilocksPair W = V.exp(k);
         // Z <- k*G
-        GoldilocksPair Z = G.exp(bigK);
+        GoldilocksPair Z = G.exp(k);
 
         // (ka || ke) <- KMACXOF256(W_x, "", 2 * 448, "PK")
         byte[] ke_ka = KMACXOF256.KMACXOF256(
@@ -85,105 +82,130 @@ public class EllipticCurve {
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
         KMACXOF256.xor(c, m);
         // append (c.length || c) appendBytes(new byte[]{(byte) xLength}, c)
-        byte[] leftEncodedC = KMACXOF256.appendBytes(byteArrayLength(c) ,c);
+        byte[] leftEncodedC = KMACXOF256.left_encode(c);
         // t <- KMACXOF256(ka, m, 448, "PKA")
         byte[] t = KMACXOF256.KMACXOF256(ka, m, NUMBER_OF_BITS, "PKA".getBytes());
         // append (t.length || t)
-        byte[] leftEncodedT = KMACXOF256.appendBytes(byteArrayLength(t), t);
+        byte[] leftEncodedT = KMACXOF256.left_encode(t);
 
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
-        return KMACXOF256.appendBytes( KMACXOF256.leftEncode(Z.y) , leftEncodedC, leftEncodedT);
+        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.y) , leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
 
     /**
-     * Helper method used in encrypt method.
-     * @param byteArray
-     * @return Length of Byte Array into byte
-     */
-    private static byte[] byteArrayLength(byte[] byteArray) {
-        byte[] result = new byte[1];
-        result[0] = (byte) byteArray.length;
-        return result;
-    }
-    /**
-     * We want to decrypt the zct[] message, and we want to know the indices of x and y coordinate.
+     * Decrypt the zct[] message under a passphrase pw
      *
-     * @param zct
-     * @param pw
+     * @param zct given cryptogram
+     * @param pw passphrase
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        // length in zct[0], search from (1, zct[0] + 1)
-        byte[] z_y = Arrays.copyOfRange(zct, 1, zct[0]+ 1); // length of z_y is encoded at 0th index
-        BigInteger y = new BigInteger(z_y);
-        BigInteger x = f(y);
-        GoldilocksPair Z = new GoldilocksPair(x, y);
-        int cLength = zct[0] + 1;
-        // length stored in zct[0] + 1, so find length from zct[0] + 1 to
-        byte[] c = Arrays.copyOfRange(zct, zct[0] + 2, cLength + (zct[0] + 2));
+        //byte[] result = new byte[0];
+        // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
+        // TODO: possible rewrite using a left_decode() function?
+        // byte[] z_x
+        // length of z_y is encoded at 0th index
+        int y_len = zct[0] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+        byte[] z_y = Arrays.copyOfRange(zct, 1, y_len + 1);
+        // TODO: (re?)store x_lsb ?
+        GoldilocksPair Z = new GoldilocksPair(false, new BigInteger(z_y));
 
-        int tLength = cLength+ (zct[0] + 2);
-        byte[] t = Arrays.copyOfRange(zct, tLength + 1, tLength + tLength + 1);
+        int c_len = zct[y_len + 1] & 0xFF;
+        byte[] c = Arrays.copyOfRange(zct, y_len + 1, y_len + 1 + c_len);
+
+        int t_len = zct[y_len + 1 + c_len] & 0xFF;
+        byte[] t = Arrays.copyOfRange(zct, y_len + 1 + c_len, y_len + 1 + c_len + t_len);
+        // length in zct[0], search from (1, zct[0] + 1)
 
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
+
         // 2. s <- 4s mod r
-        BigInteger bigS = new BigInteger(s);
-        bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
+        BigInteger bigS = new BigInteger(s).shiftLeft(2).mod(R);
+        //GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
+
         // 3. W <- s*Z
         GoldilocksPair W = Z.exp(bigS);
 
         // 4. (ka || ke) <- KMACXOF256(W_x, "", 2 x 448, "PK")
         byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2 * NUMBER_OF_BITS, "PK".getBytes());
-
-        // initialize ka & ke
+        // 4. (ka || ke) <- KMACXOF256(Wx, “”, 2×448, “PK”)
         byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
-        // 5. m <- KMACXOF256(ka, "", |c|, "PKE") xor c
-        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length, "PKE".getBytes());
-        KMACXOF256.xor(m, c);
 
-        // 6. t' <- KMACSOF256(ka, m, 448, "PKA")
+        // 5. m <- KMACXOF256(ke, “”, |c|, “PKE”)  c
+        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length, "PKE".getBytes());
+
+        // 6. t’ <- KMACXOF256(ka, m, 448, “PKA”)
         byte[] tPrime = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
 
-        if (Arrays.equals(t, tPrime)) {
+        // 7. accept if, and only if, t’ = t
+        if (Arrays.equals(tPrime, t)) {
             return m;
         } else {
             throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
         }
     }
-    static class KeyPair {
-        /**
-         * Schnorr Signature creates key pair of signature and public key.
-         * DataStructure to contain the generated keypairs.
-         */
 
-        private GoldilocksPair publicKey;
+    /**
+     * Generates a signature for a byte array m under passphrase pw
+     *
+     * @param m  given message/plaintext
+     * @param pw given passphrase
+     * @return KeyPair
+     */
+    public static byte[][] generateSignature(byte[] m, byte[] pw) {
+        //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
+        var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes()))
+            .shiftLeft(2).mod(R);
 
-        private BigInteger signature;
-        public KeyPair(BigInteger signature, GoldilocksPair publicKey) {
-            this.signature = signature;
-            this.publicKey = publicKey;
+        //▪ k <- KMACXOF256(s, m, 448, “N”); k  4k (mod r)
+        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, 448, "N".getBytes()))
+                .shiftLeft(2).mod(R);
 
-        }
+        //▪ U <- k*G;
+        var U = G.exp(k);
 
-        public BigInteger getSignature() {
-            return this.signature;
-        }
+        //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
+        var h = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
+        var z = (k.subtract((new BigInteger(h)).multiply(s))).mod(R).toByteArray();
 
-        public GoldilocksPair getPublicKey() {
-            return this.publicKey;
-        }
+        //▪ signature: (h, z)
+        return new byte[][]{h, z};
+    }
+
+    /**
+     * verifies a signature (h, z) for a byte array m under the (Schnorr/ DHIES)
+     * public key V
+     * @param hz signature (h, z)
+     * @param m message/plaintext
+     * @return boolean
+     */
+    public static boolean verifySignature(byte[][] hz, GoldilocksPair V, byte[] m) {
+        // TODO: should be able to pass in and destructure signature (h, z) as byte[]
+        var h = hz[0];
+        var z = hz[1];
+
+        var U = G.exp(new BigInteger(z)).add(V.exp(new BigInteger(h)));
+        var h_prime = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
+        return h == h_prime;
+    }
+    /**
+     * @param publicKey Schnorr Signature creates key pair of signature and public key.
+     *                  DataStructure to contain the generated keypairs.
+     */
+    record KeyPair(BigInteger signature, GoldilocksPair publicKey) {
 
         /**
          * Returns a key pair as a (signature, goldilocksPair) format.
+         *
          * @return String version of key pair as (signature value, goldilocksPair)
          */
-        public String toString() {
-            return String.format("(%s, %s)", signature, publicKey);
+            public String toString() {
+                return String.format("(%s, %s)", signature, publicKey);
+            }
         }
-    }
     /**
      * Neutral element: O := (0, 1)
      * Neutral element has a point of (0, 1)

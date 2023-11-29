@@ -66,6 +66,19 @@ public class KMACXOF256 {
     }
 
     /**
+     * extends left_encode to function for bigintegers, as long as they're
+     * less than 256 bytes.
+     * @param x
+     * @return
+     */
+    public static byte[] left_encode(BigInteger x) {
+        var b = x.toByteArray();
+        return appendBytes(new byte[]{(byte) b.length}, b);
+    }
+    public static byte[] left_encode(byte[] b) {
+        return appendBytes(new byte[]{(byte) b.length}, b);
+    }
+    /**
      * appends any number of byte arrays into a whole,
      * seen as .... || .... || ... || .... in the spec.
      * @param Xs given arguments of any number of byte arrays
