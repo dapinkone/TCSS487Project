@@ -78,8 +78,8 @@ public class EllipticCurve {
                 "PK".getBytes());
 
         // split (ka || ke) a (448 * 2) long bits into 448 bits (56 bytes in length)
-        byte[] ke = Arrays.copyOfRange(ke_ka, 0, 56); //
-        byte[] ka = Arrays.copyOfRange(ke_ka, 56, 112);
+        byte[] ka = Arrays.copyOfRange(ke_ka, 0, 56); //
+        byte[] ke = Arrays.copyOfRange(ke_ka, 56, 112);
 
         // c <- KMACXOF256(ke, "", |m|, "PKE") xor m
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
@@ -115,21 +115,45 @@ public class EllipticCurve {
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
         byte[] result = new byte[0];
-        // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
-        // byte[] z_x
+
+        // length in zct[0], search from (1, zct[0] + 1)
         byte[] z_y = Arrays.copyOfRange(zct, 1, zct[0]+ 1); // length of z_y is encoded at 0th index
-        // byte[] c = (zct, zct[0] + x, end)
-        // byte[] t = (zct, start, zct.length)
+        BigInteger y = new BigInteger(z_y);
+        BigInteger x = f(y);
+        GoldilocksPair Z = new GoldilocksPair(x, y);
+        int cLength = zct[0] + 1;
+        // length stored in zct[0] + 1, so find length from zct[0] + 1 to
+        byte[] c = Arrays.copyOfRange(zct, zct[0] + 2, cLength + (zct[0] + 2));
+
+        int tLength = cLength+ (zct[0] + 2);
+        byte[] t = Arrays.copyOfRange(zct, tLength + 1, tLength + tLength + 1);
+
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
         // 2. s <- 4s mod r
         BigInteger bigS = new BigInteger(s);
         bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
-        GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
-
         // 3. W <- s*Z
+        GoldilocksPair W = Z.exp(bigS);
 
-        return result;
+        // 4. (ka || ke) <- KMACXOF256(W_x, "", 2 x 448, "PK")
+        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2 * NUMBER_OF_BITS, "PK".getBytes());
+
+        // initialize ka & ke
+        byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
+        byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
+        // 5. m <- KMACXOF256(ka, "", |c|, "PKE") xor c
+        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length, "PKE".getBytes());
+        KMACXOF256.xor(m, c);
+
+        // 6. t' <- KMACSOF256(ka, m, 448, "PKA")
+        byte[] tPrime = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
+
+        if (Arrays.equals(t, tPrime)) {
+            return m;
+        } else {
+            throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
+        }
     }
     static class KeyPair {
         /**
