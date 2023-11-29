@@ -1,5 +1,4 @@
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import static java.math.BigInteger.ONE;
@@ -143,37 +142,22 @@ public class EllipticCurve {
             throw new IllegalArgumentException("Decryption failed: authentication tag does not match");
         }
     }
-    static class KeyPair {
-        /**
-         * Schnorr Signature creates key pair of signature and public key.
-         * DataStructure to contain the generated keypairs.
-         */
 
-        private GoldilocksPair publicKey;
-
-        private BigInteger signature;
-        public KeyPair(BigInteger signature, GoldilocksPair publicKey) {
-            this.signature = signature;
-            this.publicKey = publicKey;
-
-        }
-
-        public BigInteger getSignature() {
-            return this.signature;
-        }
-
-        public GoldilocksPair getPublicKey() {
-            return this.publicKey;
-        }
+    /**
+     * @param publicKey Schnorr Signature creates key pair of signature and public key.
+     *                  DataStructure to contain the generated keypairs.
+     */
+    record KeyPair(BigInteger signature, GoldilocksPair publicKey) {
 
         /**
          * Returns a key pair as a (signature, goldilocksPair) format.
+         *
          * @return String version of key pair as (signature value, goldilocksPair)
          */
-        public String toString() {
-            return String.format("(%s, %s)", signature, publicKey);
+            public String toString() {
+                return String.format("(%s, %s)", signature, publicKey);
+            }
         }
-    }
     /**
      * Neutral element: O := (0, 1)
      * Neutral element has a point of (0, 1)
