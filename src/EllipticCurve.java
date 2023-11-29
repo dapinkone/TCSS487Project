@@ -9,7 +9,6 @@ public class EllipticCurve {
     static final SecureRandom RAND = new SecureRandom();
     // data structure to represent goldilocks pair (x, y)
     // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
-
     public static final int NUMBER_OF_BITS = 448;
     private final static BigInteger D = new BigInteger("-39081");
     // P := 2^448 − 2^224 − 1
@@ -26,10 +25,10 @@ public class EllipticCurve {
      * Generate a Schnorr Signature key pair from a passphrase pw:
      *
       */
-    public static KeyPair generateKeyPair(String passPhrase) {
+    public static KeyPair generateKeyPair(String pw) {
 
         // s <- KMACXOF256(pw, "", 448, "SK")
-        byte[] s = KMACXOF256.KMACXOF256(passPhrase.getBytes(), "".getBytes(), 448, "SK".getBytes());
+        byte[] s = KMACXOF256.KMACXOF256(pw.getBytes(), "".getBytes(), 448, "SK".getBytes());
         BigInteger bigS = new BigInteger(s);
 
         // x <- 4s(mod r); s is byte[], bytes multiply as a BigInteger?
