@@ -56,7 +56,6 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] encrypt(byte[] m, GoldilocksPair V) {
-        byte[][] result = new byte[4][256];
         // k <- Random(448);
         BigInteger k = new BigInteger(NUMBER_OF_BITS, RAND)
                 // k <- 4k (mod r)
@@ -68,15 +67,15 @@ public class EllipticCurve {
         GoldilocksPair Z = G.exp(k);
 
         // (ka || ke) <- KMACXOF256(W_x, "", 2 * 448, "PK")
-        byte[] ke_ka = KMACXOF256.KMACXOF256(
+        byte[] ka_ke = KMACXOF256.KMACXOF256(
                 W.x.toByteArray(),
                 "".getBytes(),
                 NUMBER_OF_BITS * 2,
                 "PK".getBytes());
 
         // split (ka || ke) a (448 * 2) long bits into 448 bits (56 bytes in length)
-        byte[] ka = Arrays.copyOfRange(ke_ka, 0, 56); //
-        byte[] ke = Arrays.copyOfRange(ke_ka, 56, 112);
+        byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56); //
+        byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
 
         // c <- KMACXOF256(ke, "", |m|, "PKE") xor m
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
@@ -101,8 +100,6 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        //byte[] result = new byte[0];
-        // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
         // TODO: possible rewrite using a left_decode() function?
         // byte[] z_x
         // length of z_y is encoded at 0th index
@@ -112,7 +109,7 @@ public class EllipticCurve {
         GoldilocksPair Z = new GoldilocksPair(false, new BigInteger(z_y));
 
         int c_len = zct[y_len + 1] & 0xFF;
-        byte[] c = Arrays.copyOfRange(zct, y_len + 1, y_len + 1 + c_len);
+        byte[] c = Arrays.copyOfRange(zct, y_len + 1, y_len + 1 + c_len); // TODO: not using c?
 
         int t_len = zct[y_len + 1 + c_len] & 0xFF;
         byte[] t = Arrays.copyOfRange(zct, y_len + 1 + c_len, y_len + 1 + c_len + t_len);
@@ -123,7 +120,6 @@ public class EllipticCurve {
 
         // 2. s <- 4s mod r
         BigInteger bigS = new BigInteger(s).shiftLeft(2).mod(R);
-        //GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
 
         // 3. W <- s*Z
         GoldilocksPair W = Z.exp(bigS);
