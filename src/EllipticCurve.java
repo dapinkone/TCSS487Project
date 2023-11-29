@@ -114,8 +114,6 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        byte[] result = new byte[0];
-
         // length in zct[0], search from (1, zct[0] + 1)
         byte[] z_y = Arrays.copyOfRange(zct, 1, zct[0]+ 1); // length of z_y is encoded at 0th index
         BigInteger y = new BigInteger(z_y);
