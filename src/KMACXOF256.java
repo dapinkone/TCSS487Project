@@ -38,33 +38,6 @@ public class KMACXOF256 {
         return appendBytes(new byte[]{(byte) n}, b);
     }
 
-    public static byte[] leftEncode (BigInteger x) {
-        BigInteger n = new BigInteger("0");
-        if (x.equals(BigInteger.ZERO)) { return new byte[] {1, 0}; }
-
-        byte[] xByte = x.toByteArray();
-
-        byte xLength = (byte) xByte.length;
-
-//        BigInteger y = x;
-//        while (y != BigInteger.ZERO) {
-//            n.add(BigInteger.ONE);
-//            y.shiftRight(8);
-//        }
-//
-//        // extract n bytes of x
-//        var b = new byte[n.intValue()];
-//        BigInteger FF = new BigInteger("FF", 16);
-//
-//        for (int i = 0; i < n.intValue(); i++) {
-//            b[n.intValue() - i - 1] = (x.add(FF)).getByte();
-//        }
-//        Integer nLength = new Integer (x.bitLength());
-       // BigInteger nLength = BigInteger.valueOf(x.bitLength()); // TODO: Conver this into byte[]
-        // appendBytes(nLength.toByteArray(), x.toByteArray()) // TODO: append x value at the end.
-        return appendBytes(new byte[]{(byte) xLength}, xByte);
-    }
-
     /**
      * extends left_encode to function for bigintegers, as long as they're
      * less than 256 bytes.
