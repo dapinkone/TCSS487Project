@@ -1,6 +1,7 @@
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Arrays;
+
 import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TWO;
 
@@ -143,6 +144,49 @@ public class EllipticCurve {
         }
     }
 
+    /**
+     * Generates a signature for a byte array m under passphrase pw
+     *
+     * @param m  given message/plaintext
+     * @param pw given passphrase
+     * @return KeyPair
+     */
+    public static byte[][] generateSignature(byte[] m, byte[] pw) {
+        //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
+        var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes()))
+            .shiftLeft(2).mod(R);
+
+        //▪ k <- KMACXOF256(s, m, 448, “N”); k  4k (mod r)
+        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, 448, "N".getBytes()))
+                .shiftLeft(2).mod(R);
+
+        //▪ U <- k*G;
+        var U = G.exp(k);
+
+        //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
+        var h = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
+        var z = (k.subtract((new BigInteger(h)).multiply(s))).mod(R).toByteArray();
+
+        //▪ signature: (h, z)
+        return new byte[][]{h, z};
+    }
+
+    /**
+     * verifies a signature (h, z) for a byte array m under the (Schnorr/ DHIES)
+     * public key V
+     * @param hz signature (h, z)
+     * @param m message/plaintext
+     * @return boolean
+     */
+    public static boolean verifySignature(byte[][] hz, GoldilocksPair V, byte[] m) {
+        // TODO: should be able to pass in and destructure signature (h, z) as byte[]
+        var h = hz[0];
+        var z = hz[1];
+
+        var U = G.exp(new BigInteger(z)).add(V.exp(new BigInteger(h)));
+        var h_prime = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
+        return h == h_prime;
+    }
     /**
      * @param publicKey Schnorr Signature creates key pair of signature and public key.
      *                  DataStructure to contain the generated keypairs.
