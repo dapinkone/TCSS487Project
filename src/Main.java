@@ -19,21 +19,24 @@ class Main {
 
     public static void main(String[] args) throws IOException {
         //run_tests();
-        Mode modeSelected = null;
+
+        // parse mode flags
+        Mode modeSelected = parseModFlags(args);
         String fin = null, fout = null, fpw = null; // file names
         byte[] pw = null, m = null;
-        // parse mode flags
-        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
-            System.out.printf("unknown command %s", args[0]);
-        } else if (args.length > 0) {
-            switch (args[0].toLowerCase().charAt(1)) {
-                case 'h' -> modeSelected = Mode.HASH;
-                case 't' -> modeSelected = Mode.TAG;
-                case 'e' -> modeSelected = Mode.ENCRYPT;
-                case 'd' -> modeSelected = Mode.DECRYPT;
-                default -> System.out.printf("Unknown flag: %s\n", args[0]);
-            }
-        }
+
+//        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
+//            System.out.printf("unknown command %s", args[0]);
+//        } else if (args.length > 0) {
+//            switch (args[0].toLowerCase().charAt(1)) {
+//                case 'h' -> modeSelected = Mode.HASH;
+//                case 't' -> modeSelected = Mode.TAG;
+//                case 'e' -> modeSelected = Mode.ENCRYPT;
+//                case 'd' -> modeSelected = Mode.DECRYPT;
+//                case 'g' -> modeSelected = Mode.GENERATE;
+//                default -> System.out.printf("Unknown flag: %s\n", args[0]);
+//            }
+//        }
 
         // parse for input / output flags.
         for (int ptr = 1; ptr < args.length - 1; ptr++) {
@@ -45,6 +48,7 @@ class Main {
                         pw = args[ptr + 1].getBytes(); // password as text.
             }
         }
+
         // if no commandline mode given, present menus:
         while (modeSelected == null) {
             System.out.println("Welcome to the encryption");
@@ -56,6 +60,7 @@ class Main {
             System.out.println("5. Encrypt a data file");
             System.out.println("6. Decrypt a symmetric cryptogram");
             System.out.println("7. Exit");
+            System.out.println("8. Generate an elliptic key pair");
 
             System.out.print("Enter your choice: ");
 
@@ -94,10 +99,15 @@ class Main {
                     System.out.println("Exiting Encryption");
                     System.exit(0);
                 }
+                case 8 -> {
+                    modeSelected = Mode.GENERATE;
+                    pw = prompt("password").getBytes(); // collect pw
+                }
                 default ->
                         System.out.println("Invalid option. Please try again");
             }
         }
+
         // collect necessary data from files (fin, fpw)
         if (fpw != null && pw == null) // password file provided
             pw = readFile(fpw);
@@ -113,6 +123,12 @@ class Main {
                     KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes()); // tag(m, pw);
             case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
             case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
+            // returns public key's y coordinate.
+            // TODO: Should x coordinate be retrieved later as well?
+            // TODO: Should x and y append together?
+//            case GENERATE -> EllipticCurve.generateKeyPair(pw).publicKey().y.toByteArray();
+            case GENERATE -> KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
+                                                    KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().y));
         };
 
         // results/output has been gathered, put said results where requested.
@@ -128,6 +144,29 @@ class Main {
                     System.out.print((char) b);
                 }
         }
+    }
+
+    /**
+     * Helper function in the Main.
+     *
+     * @param args Commandline input.
+     * @return Chosen mode by the user.
+     */
+    public static Mode parseModFlags(String[] args) {
+        Mode modeSelected = null;
+        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
+            System.out.printf("unknown command %s", args[0]);
+        } else if (args.length > 0) {
+            switch (args[0].toLowerCase().charAt(1)) {
+                case 'h' -> modeSelected = Mode.HASH;
+                case 't' -> modeSelected = Mode.TAG;
+                case 'e' -> modeSelected = Mode.ENCRYPT;
+                case 'd' -> modeSelected = Mode.DECRYPT;
+                case 'g' -> modeSelected = Mode.GENERATE;
+                default -> System.out.printf("Unknown flag: %s\n", args[0]);
+            }
+        }
+        return modeSelected;
     }
 
     private static String prompt(String s) {
@@ -518,6 +557,9 @@ class Main {
 
     enum Mode {
         HASH, TAG, ENCRYPT, DECRYPT
+        ,GENERATE
+//        , ELLIPTIC_ENCRYPT, ELLIPTIC_DECRYPT,
+//        SIGN, VERIFY
     }
 
 }

@@ -40,17 +40,17 @@ public class EllipticCurve {
     /**
      * Generate a Schnorr Signature key pair from a passphrase pw:
      */
-    public static KeyPair generateKeyPair(String pw) {
+    public static KeyPair generateKeyPair(byte[] pw) {
 
         // s <- KMACXOF256(pw, "", 448, "SK")
-        byte[] s = KMACXOF256.KMACXOF256(pw.getBytes(), "".getBytes(), 448, "SK".getBytes());
+        byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
         BigInteger bigS = new BigInteger(s);
 
         // x <- 4s(mod r); s is byte[], bytes multiply as a BigInteger?
         bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
         GoldilocksPair publicKey = G.exp(bigS);
-        KeyPair keypair = new KeyPair(bigS, publicKey);
-        return keypair;
+
+        return new KeyPair(bigS, publicKey);
     }
 
     /**
@@ -309,6 +309,12 @@ public class EllipticCurve {
      *                  DataStructure to contain the generated keypairs.
      */
     record KeyPair(BigInteger signature, GoldilocksPair publicKey) {
+
+
+        @Override
+        public GoldilocksPair publicKey() {
+            return publicKey;
+        }
 
         /**
          * Returns a key pair as a (signature, goldilocksPair) format.
