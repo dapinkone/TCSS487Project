@@ -101,10 +101,7 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        //byte[] result = new byte[0];
-        // TODO: Need to retrieve Z (GoldilocksPair), c and t from zct
-        // TODO: possible rewrite using a left_decode() function?
-        // byte[] z_x
+
         // length of z_y is encoded at 0th index
         int y_len = zct[0] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
         byte[] z_y = Arrays.copyOfRange(zct, 1, y_len + 1);
@@ -123,7 +120,6 @@ public class EllipticCurve {
 
         // 2. s <- 4s mod r
         BigInteger bigS = new BigInteger(s).shiftLeft(2).mod(R);
-        //GoldilocksPair W = neutralElement.exp(bigS); // TODO: Need to retrieve Goldilocks Pair from cryptogram (Z, c, t)
 
         // 3. W <- s*Z
         GoldilocksPair W = Z.exp(bigS);
@@ -202,10 +198,10 @@ public class EllipticCurve {
          *
          * @return String version of key pair as (signature value, goldilocksPair)
          */
-            public String toString() {
-                return String.format("(%s, %s)", signature, publicKey);
-            }
+        public String toString() {
+            return String.format("(%s, %s)", signature, publicKey);
         }
+    }
     /**
      * Neutral element: O := (0, 1)
      * Neutral element has a point of (0, 1)
