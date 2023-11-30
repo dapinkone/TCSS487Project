@@ -6,11 +6,12 @@ import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TWO;
 
 public class EllipticCurve {
+    /**
+     * Neutral element: O := (0, 1)
+     * Neutral element has a point of (0, 1)
+     */
+    public static final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, ONE);
     static final SecureRandom RAND = new SecureRandom();
-    // data structure to represent goldilocks pair (x, y)
-    // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
-//    public static final int NUMBER_OF_BITS = 448;
-    private final static BigInteger D = new BigInteger("-39081");
     // P := 2^448 − 2^224 − 1
     final static BigInteger PRIME_P = (
             TWO.pow(448) // 2^448
@@ -20,11 +21,25 @@ public class EllipticCurve {
     // 𝑟 = 2^446 − 13818066809895115352007386748515426880336692474882178609894547503885
     final static BigInteger R = (TWO).pow(446).subtract(
             new BigInteger("13818066809895115352007386748515426880336692474882178609894547503885"));
+    // data structure to represent goldilocks pair (x, y)
+    // Edwards curve equation : x^2 + y^2 = 1 +dx^2y^2 with d = -39081
+//    public static final int NUMBER_OF_BITS = 448;
+    private final static BigInteger D = new BigInteger("-39081");
+    /**
+     * public generator G
+     * y = -3 (mod p) and x = something
+     **/
+    private static final BigInteger G_y = PRIME_P.subtract(BigInteger.valueOf(3));
+    public static final GoldilocksPair G = new GoldilocksPair(
+            //BigInteger.valueOf(-3).mod(PRIME_P),
+            // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
+            false,
+            G_y
+    );
 
     /**
      * Generate a Schnorr Signature key pair from a passphrase pw:
-     *
-      */
+     */
     public static KeyPair generateKeyPair(String pw) {
 
         // s <- KMACXOF256(pw, "", 448, "SK")
@@ -40,6 +55,7 @@ public class EllipticCurve {
 
     /**
      * Currently uses 448 as number of bits in this function.
+     *
      * @return
      */
     private static byte[] randomBytes() {
@@ -48,6 +64,7 @@ public class EllipticCurve {
         random.nextBytes(bytes);
         return bytes;
     }
+
     /**
      * Encrypts a byte array m, under the (Schnorr/DHIES) public key
      *
@@ -78,7 +95,7 @@ public class EllipticCurve {
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
 
         // c <- KMACXOF256(ke, "", |m|, "PKE") xor m
-        byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length*8, "PKE".getBytes());
+        byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length * 8, "PKE".getBytes());
         KMACXOF256.xor(c, m);
         // append (c.length || c) appendBytes(new byte[]{(byte) xLength}, c)
         byte[] leftEncodedC = KMACXOF256.left_encode(c);
@@ -88,7 +105,7 @@ public class EllipticCurve {
         byte[] leftEncodedT = KMACXOF256.left_encode(t);
 
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
-        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.y) , leftEncodedC, leftEncodedT);
+        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.y), leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
 
@@ -96,7 +113,7 @@ public class EllipticCurve {
      * Decrypt the zct[] message under a passphrase pw
      *
      * @param zct given cryptogram
-     * @param pw passphrase
+     * @param pw  passphrase
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
@@ -154,7 +171,7 @@ public class EllipticCurve {
     public static byte[][] generateSignature(byte[] m, byte[] pw) {
         //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
         var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes()))
-            .shiftLeft(2).mod(R);
+                .shiftLeft(2).mod(R);
 
         //▪ k <- KMACXOF256(s, m, 448, “N”); k  4k (mod r)
         var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, 448, "N".getBytes()))
@@ -174,8 +191,9 @@ public class EllipticCurve {
     /**
      * verifies a signature (h, z) for a byte array m under the (Schnorr/ DHIES)
      * public key V
+     *
      * @param hz signature (h, z)
-     * @param m message/plaintext
+     * @param m  message/plaintext
      * @return boolean
      */
     public static boolean verifySignature(byte[][] hz, GoldilocksPair V, byte[] m) {
@@ -187,41 +205,11 @@ public class EllipticCurve {
         var h_prime = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
         return h == h_prime;
     }
-    /**
-     * @param publicKey Schnorr Signature creates key pair of signature and public key.
-     *                  DataStructure to contain the generated keypairs.
-     */
-    record KeyPair(BigInteger signature, GoldilocksPair publicKey) {
 
-        /**
-         * Returns a key pair as a (signature, goldilocksPair) format.
-         *
-         * @return String version of key pair as (signature value, goldilocksPair)
-         */
-            public String toString() {
-                return String.format("(%s, %s)", signature, publicKey);
-            }
-        }
-    /**
-     * Neutral element: O := (0, 1)
-     * Neutral element has a point of (0, 1)
-     */
-    public static final GoldilocksPair neutralElement = new GoldilocksPair(BigInteger.ZERO, ONE);
-
-    /**
-     * public generator G
-     * y = -3 (mod p) and x = something
-     **/
-    private static final BigInteger G_y = PRIME_P.subtract(BigInteger.valueOf(3));
-    public static final GoldilocksPair G = new GoldilocksPair(
-            //BigInteger.valueOf(-3).mod(PRIME_P),
-            // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
-            false,
-            G_y
-    );
     public static BigInteger f(BigInteger x) { // default parameter for lsb
         return f(x, false);
     }
+
     public static BigInteger f(BigInteger x, boolean lsb) { // formula is symmetrical. x or y are interchangeable.
         // ± √((1 − 𝑦^2)/(1 + 39081𝑦^2)) mod 𝑝.
         return sqrt(
@@ -235,6 +223,103 @@ public class EllipticCurve {
         );
         // TODO: fix or throw null exception
     }
+
+    /**
+     * Multiply various given BigIntegers together, mod PRIME_P
+     *
+     * @param lst list of bigints to be multiplied
+     * @return result mod PRIME_P
+     */
+    private static BigInteger mult(BigInteger... lst) {
+        var result = ONE;
+
+        for (var x : lst) {
+            result = (x != null) ? result.multiply(x).mod(PRIME_P) : result;
+        }
+        return result; // 36.489s pre-karatsuba
+    }
+
+    /**
+     * Compute a square root of v mod p with a specified least-significant bit
+     * if such a root exists.
+     *
+     * @param v   the radicand.
+     * @param p   the modulus (must satisfy p mod 4 = 3).
+     * @param lsb desired least significant bit (true: 1, false: 0).
+     * @return a square root r of v mod p with r mod 2 = 1 iff lsb = true
+     * if such a root exists, otherwise null.
+     */
+    public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
+        assert (p.testBit(0) && p.testBit(1));
+        if (v.signum() == 0) {
+            return BigInteger.ZERO;
+        }
+        BigInteger r = v.modPow(p.shiftRight(2).add(ONE), p);
+        if (r.testBit(0) != lsb) {
+            r = p.subtract(r); // correct the lsb
+        }
+        return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
+    }
+
+    /**
+     * From x = sqrt ((1-y^2) / (1 + 39081 * y^2)) mod p
+     * We are calculating y by swapping x and y in the above equation
+     * because x and y are symmetric.
+     * If the radicand is negative, then it will be null.
+     * 1 out of 2 y_0 value can be null.
+     * By default: if both square root values equal to null, throw IllegalArgument Exception
+     * if both possible y values are null.
+     *
+     * @param x BigInteger value of x
+     * @return array of possible y_0 values.
+     */
+    public static BigInteger squareRootModP(BigInteger x) {
+        BigInteger[] possibleY_0 = new BigInteger[2];
+        BigInteger yValue;
+
+        BigInteger firstPart = ONE.subtract(mult(x, x)).mod(PRIME_P);
+        BigInteger secondPart = ONE.add(mult(BigInteger.valueOf(39081), mult(x, x))).mod(PRIME_P);
+        BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
+
+        BigInteger firstPossibleY_0 = sqrt(result, PRIME_P, true);
+        BigInteger secondPossibleY_0 = sqrt(result, PRIME_P, false);
+        // possible value of y could be null.
+        possibleY_0[0] = firstPossibleY_0;
+        possibleY_0[1] = secondPossibleY_0;
+
+        // both Y values are not null, return 0th index
+        if (possibleY_0[0] != null && possibleY_0[1] != null) {
+            yValue = possibleY_0[0];
+            System.out.println("Both y values are not null");
+            // Only 0th index of Y = null
+        } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
+            yValue = possibleY_0[1];
+            // Only 1st index of Y = null
+        } else if (possibleY_0[0] != null && possibleY_0[1] == null) {
+            yValue = possibleY_0[0];
+            // both 0th and 1st index of Y = null
+        } else {
+            throw new IllegalArgumentException("Both square root values are null");
+        }
+        return yValue;
+    }
+
+    /**
+     * @param publicKey Schnorr Signature creates key pair of signature and public key.
+     *                  DataStructure to contain the generated keypairs.
+     */
+    record KeyPair(BigInteger signature, GoldilocksPair publicKey) {
+
+        /**
+         * Returns a key pair as a (signature, goldilocksPair) format.
+         *
+         * @return String version of key pair as (signature value, goldilocksPair)
+         */
+        public String toString() {
+            return String.format("(%s, %s)", signature, publicKey);
+        }
+    }
+
     static class GoldilocksPair {
 
         final public BigInteger x;
@@ -246,9 +331,11 @@ public class EllipticCurve {
             this.x = x;
             this.y = y;
         }
+
         public GoldilocksPair(boolean x_lsb, BigInteger y) {
             this(f(y, x_lsb), y);
         }
+
         @Override
         public String toString() {
             return String.format("(%s, %s)", x, y);
@@ -331,83 +418,6 @@ public class EllipticCurve {
             }
             return V;
         }
-    }
-    /**
-     * Multiply various given BigIntegers together, mod PRIME_P
-     * @param lst list of bigints to be multiplied
-     * @return result mod PRIME_P
-     */
-    private static BigInteger mult(BigInteger ...lst) {
-        var result = ONE;
-
-        for(var x : lst) {
-            result = ( x != null ) ? result.multiply(x).mod(PRIME_P) : result;
-        }
-        return result; // 36.489s pre-karatsuba
-    }
-    /**
-     * Compute a square root of v mod p with a specified least-significant bit
-     * if such a root exists.
-     *
-     * @param v the radicand.
-     * @param p the modulus (must satisfy p mod 4 = 3).
-     * @param lsb desired least significant bit (true: 1, false: 0).
-     * @return a square root r of v mod p with r mod 2 = 1 iff lsb = true
-     * if such a root exists, otherwise null.
-     */
-    public static BigInteger sqrt(BigInteger v, BigInteger p, boolean lsb) {
-        assert (p.testBit(0) && p.testBit(1));
-        if (v.signum() == 0) {
-            return BigInteger.ZERO;
-        }
-        BigInteger r = v.modPow(p.shiftRight(2).add(ONE), p);
-        if (r.testBit(0) != lsb) {
-            r = p.subtract(r); // correct the lsb
-        }
-        return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
-    }
-    /**
-     * From x = sqrt ((1-y^2) / (1 + 39081 * y^2)) mod p
-     * We are calculating y by swapping x and y in the above equation
-     * because x and y are symmetric.
-     * If the radicand is negative, then it will be null.
-     * 1 out of 2 y_0 value can be null.
-     * By default: if both square root values equal to null, throw IllegalArgument Exception
-     * if both possible y values are null.
-     *
-     * @param x BigInteger value of x
-     *
-     * @return array of possible y_0 values.
-     */
-    public static BigInteger squareRootModP(BigInteger x) {
-        BigInteger[] possibleY_0 = new BigInteger[2];
-        BigInteger yValue;
-
-        BigInteger firstPart = ONE.subtract(mult(x, x)).mod(PRIME_P);
-        BigInteger secondPart = ONE.add(mult(BigInteger.valueOf(39081), mult(x, x))).mod(PRIME_P);
-        BigInteger result = firstPart.multiply(secondPart.modInverse(PRIME_P)).mod(PRIME_P);
-
-        BigInteger firstPossibleY_0 = sqrt(result, PRIME_P, true);
-        BigInteger secondPossibleY_0 = sqrt(result, PRIME_P, false);
-        // possible value of y could be null.
-        possibleY_0[0] = firstPossibleY_0;
-        possibleY_0[1] = secondPossibleY_0;
-
-        // both Y values are not null, return 0th index
-        if (possibleY_0[0] != null && possibleY_0[1] != null) {
-            yValue = possibleY_0[0];
-            System.out.println("Both y values are not null");
-            // Only 0th index of Y = null
-        } else if (possibleY_0[0] == null && possibleY_0[1] != null) {
-            yValue = possibleY_0[1];
-            // Only 1st index of Y = null
-        } else if (possibleY_0[0] != null && possibleY_0[1] == null) {
-            yValue = possibleY_0[0];
-            // both 0th and 1st index of Y = null
-        } else {
-            throw new IllegalArgumentException("Both square root values are null");
-        }
-        return yValue;
     }
 
     // G

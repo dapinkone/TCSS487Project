@@ -16,8 +16,8 @@ public class Sha3_tests {
                 (byte) 0xCD, (byte) 0xEF, (byte) 0x12, (byte) 0x34
         };
 
-        for(int i=0; i < expected.length; i++) {
-            if(expected[i] != ctx.b[i]) {
+        for (int i = 0; i < expected.length; i++) {
+            if (expected[i] != ctx.b[i]) {
                 System.out.println("failed setWord()");
                 return false;
             }
@@ -25,23 +25,23 @@ public class Sha3_tests {
         // test byWord()
 
         var rcvd = ctx.byWord();
-        for(int i=0; i < words.length; i++) {
-            if(words[i] != rcvd[i]) {
+        for (int i = 0; i < words.length; i++) {
+            if (words[i] != rcvd[i]) {
                 System.out.println("failed byWord()");
                 return false;
             }
         }
         /////
         Sha3.shake256_init(ctx);
-        var data = new byte[] { // two words/longs worth of bytes.
+        var data = new byte[]{ // two words/longs worth of bytes.
                 0x0, 1, 2, 3, 4, 5, 6, 7,
                 0x0, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70
         };
         ctx.setBytes(data);
 
         ctx.setWord(ctx.byWord()); // inverse test
-        for(int i=0; i < data.length; i++) {
-            if(data[i] != ctx.b[i]) {
+        for (int i = 0; i < data.length; i++) {
+            if (data[i] != ctx.b[i]) {
                 System.out.println("Failed inverse word test");
                 return false;
             }
@@ -58,9 +58,10 @@ public class Sha3_tests {
             return ch - 'a' + 10;
         return -1;
     }
+
     static int test_readhex(byte[] buf, String str, int maxbytes) {
         int i, h, l;
-        for (i = 0; i < str.length()/2; i++) {
+        for (i = 0; i < str.length() / 2; i++) {
             h = test_hexdigit(str.charAt(2 * i));
             if (h < 0)
                 return i;
@@ -74,7 +75,7 @@ public class Sha3_tests {
 
     static int memcmp(byte[] sha, byte[] buf, int sha_len) {
         // checking if the first sha_len bytes of sha and buf are equal:
-        return Arrays.compare(sha,0, sha_len, buf, 0, sha_len);
+        return Arrays.compare(sha, 0, sha_len, buf, 0, sha_len);
     }
     // returns zero on success, nonzero + stderr messages on failure
 
@@ -112,7 +113,7 @@ public class Sha3_tests {
                         "6E8B8BD195BDD560689AF2348BDC74AB7CD05ED8B9A57711E9BE71E9726FDA45" +
                                 "91FEE12205EDACAF82FFBBAF16DFF9E702A708862080166C2FF6BA379BC7FFC2"
                 }
-        } ;
+        };
 
         int i, fails, msg_len, sha_len;
         //uint8_t sha[ 64],buf[64], msg[256];
@@ -137,7 +138,7 @@ public class Sha3_tests {
                 //fprintf(stderr, "[%d] SHA3-%d, len %d test FAILED.\n",
                 System.out.printf(/*stderr, */"[%d] SHA3-%d, len %d test FAILED.\n",
                         i, sha_len * 8, msg_len);
-                for(var b : sha)
+                for (var b : sha)
                     System.out.printf("%02X", b);
                 System.out.println();
                 fails++;
@@ -185,16 +186,16 @@ public class Sha3_tests {
 
             if (i >= 2) {                   // 1600-bit test pattern
                 //memset(buf, 0xA3, 20);
-                for(int x=0; x < 20; x++) buf[x] = (byte) 0xA3;
+                for (int x = 0; x < 20; x++) buf[x] = (byte) 0xA3;
 
                 for (j = 0; j < 200; j += 20)
-                    Sha3.shake_update( sha3, buf, 20);
+                    Sha3.shake_update(sha3, buf, 20);
             }
 
-            Sha3.shake_xof( sha3);               // switch to extensible output
+            Sha3.shake_xof(sha3);               // switch to extensible output
 
             for (j = 0; j < 512; j += 32)   // output. discard bytes 0..479
-                Sha3.shake_out( sha3, buf, 32);
+                Sha3.shake_out(sha3, buf, 32);
 
             // compare to reference
             test_readhex(ref, testhex[i], ref.length);
