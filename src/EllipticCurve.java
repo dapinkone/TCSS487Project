@@ -44,13 +44,13 @@ public class EllipticCurve {
 
         // s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
-        BigInteger bigS = new BigInteger(s);
+        BigInteger privateKey = new BigInteger(s);
 
         // x <- 4s(mod r); s is byte[], bytes multiply as a BigInteger?
-        bigS = (BigInteger.valueOf(4)).multiply(bigS).mod(R);
-        GoldilocksPair publicKey = G.exp(bigS);
+        privateKey = (BigInteger.valueOf(4)).multiply(privateKey).mod(R);
+        GoldilocksPair publicKey = G.exp(privateKey);
 
-        return new KeyPair(bigS, publicKey);
+        return new KeyPair(privateKey, publicKey);
     }
 
     /**
@@ -308,8 +308,12 @@ public class EllipticCurve {
      * @param publicKey Schnorr Signature creates key pair of signature and public key.
      *                  DataStructure to contain the generated keypairs.
      */
-    record KeyPair(BigInteger signature, GoldilocksPair publicKey) {
+    record KeyPair(BigInteger privateKey, GoldilocksPair publicKey) {
 
+        @Override
+        public BigInteger privateKey() {
+            return privateKey;
+        }
 
         @Override
         public GoldilocksPair publicKey() {
@@ -317,12 +321,12 @@ public class EllipticCurve {
         }
 
         /**
-         * Returns a key pair as a (signature, goldilocksPair) format.
+         * Returns a key pair as a (privateKey, goldilocksPair) format.
          *
-         * @return String version of key pair as (signature value, goldilocksPair)
+         * @return String version of key pair as (privateKey value, goldilocksPair)
          */
         public String toString() {
-            return String.format("(%s, %s)", signature, publicKey);
+            return String.format("(%s, %s)", privateKey, publicKey);
         }
     }
 

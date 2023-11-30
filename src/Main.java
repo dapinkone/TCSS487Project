@@ -33,7 +33,7 @@ class Main {
 //                case 't' -> modeSelected = Mode.TAG;
 //                case 'e' -> modeSelected = Mode.ENCRYPT;
 //                case 'd' -> modeSelected = Mode.DECRYPT;
-//                case 'g' -> modeSelected = Mode.GENERATE;
+//                case 'g' -> modeSelected = Mode.PUBLICKEY;
 //                default -> System.out.printf("Unknown flag: %s\n", args[0]);
 //            }
 //        }
@@ -60,8 +60,8 @@ class Main {
             System.out.println("5. Encrypt a data file");
             System.out.println("6. Decrypt a symmetric cryptogram");
             System.out.println("7. Exit");
-            System.out.println("8. Generate an elliptic key pair");
-
+            System.out.println("8. Generate a public key");
+            System.out.println("9. Encrypt a private key");
             System.out.print("Enter your choice: ");
 
             int choice = scanner.nextInt();
@@ -100,8 +100,12 @@ class Main {
                     System.exit(0);
                 }
                 case 8 -> {
-                    modeSelected = Mode.GENERATE;
+                    modeSelected = Mode.PUBLICKEY;
                     pw = prompt("password").getBytes(); // collect pw
+                }
+                case 9 -> {
+                    modeSelected = Mode.PRIVATEKEY;
+                    pw = prompt("password").getBytes();
                 }
                 default ->
                         System.out.println("Invalid option. Please try again");
@@ -124,11 +128,13 @@ class Main {
             case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
             case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
             // returns public key's y coordinate.
-            // TODO: Should x coordinate be retrieved later as well?
             // TODO: Should x and y append together?
-//            case GENERATE -> EllipticCurve.generateKeyPair(pw).publicKey().y.toByteArray();
-            case GENERATE -> KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
+            // TODO: If public key is V = s * G, should public key be stored as byte[] or x coordinate of Goldilock
+//            case PUBLICKEY -> EllipticCurve.generateKeyPair(pw).publicKey().y.toByteArray();
+            case PUBLICKEY -> KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
                                                     KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().y));
+            // TODO: private key is s number
+            case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
         };
 
         // results/output has been gathered, put said results where requested.
@@ -162,7 +168,8 @@ class Main {
                 case 't' -> modeSelected = Mode.TAG;
                 case 'e' -> modeSelected = Mode.ENCRYPT;
                 case 'd' -> modeSelected = Mode.DECRYPT;
-                case 'g' -> modeSelected = Mode.GENERATE;
+                case 'p' -> modeSelected = Mode.PUBLICKEY;
+                case 'q' -> modeSelected = Mode.PRIVATEKEY;
                 default -> System.out.printf("Unknown flag: %s\n", args[0]);
             }
         }
@@ -557,7 +564,7 @@ class Main {
 
     enum Mode {
         HASH, TAG, ENCRYPT, DECRYPT
-        ,GENERATE
+        ,PUBLICKEY, PRIVATEKEY,
 //        , ELLIPTIC_ENCRYPT, ELLIPTIC_DECRYPT,
 //        SIGN, VERIFY
     }
