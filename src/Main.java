@@ -98,12 +98,10 @@ class Main {
                 case 7 -> {
                     System.out.println("Exiting Encryption");
                     System.exit(0);
-                }
-                case 8 -> {
+                } case 8 -> {
                     modeSelected = Mode.PUBLICKEY;
                     pw = prompt("password").getBytes(); // collect pw
-                }
-                case 9 -> {
+                }case 9 -> {
                     modeSelected = Mode.PRIVATEKEY;
                     pw = prompt("password").getBytes();
                 }
@@ -133,7 +131,9 @@ class Main {
 //            case PUBLICKEY -> EllipticCurve.generateKeyPair(pw).publicKey().y.toByteArray();
             case PUBLICKEY -> KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
                                                     KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().y));
-            // TODO: private key is s number
+            // TODO: If private key is encrypted with passphrase,
+        //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
+            //      be encrypted in ellipticCurve encryption(byte[] m, GoldilockPair)
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
         };
 
