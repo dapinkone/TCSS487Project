@@ -9,11 +9,11 @@
 // Common issue is sign bit extension when
 // implicit or explicit casting to larger types, such as byte->int.
 // requires a mask of & 0xFF to truncate.
-import java.security.MessageDigest;
+
 public class Sha3 {
+    public static final long BYTE_MASK = 0xFF;
     // TODO: these are all static methods. sha_ctx could be tied to the sha3 object, and save on arguments & complexity.
     public static int KECCAKF_ROUNDS = 24;
-    public static final long BYTE_MASK = 0xFF;
 //            #endif
 
     //#ifndef ROTL64
@@ -21,14 +21,15 @@ public class Sha3 {
 // In java, use Long.rotateLeft() instead.
     static long ROTL64(long x, long y) {
         var u = (((x) << (y)) | ((x) >>> (64 - (y))));
-        if(64 - y < 0) {
+        if (64 - y < 0) {
             throw new RuntimeException("y out of valid range for uint");
         }
         return u;
     }
+
     public static void phex(byte[] Xs) {
         // prints a byte array
-        for(var x : Xs) System.out.printf("%02X ", x);
+        for (var x : Xs) System.out.printf("%02X ", x);
         System.out.println();
     }
 //    public static void kinit256(sha3_ctx_t ctx, byte[] K, byte[] S) {
@@ -54,7 +55,6 @@ public class Sha3 {
 //    }
 
 
-
     // state context
 //    typedef struct {
 //        union {                                 // state:
@@ -64,63 +64,12 @@ public class Sha3 {
 //        int pt, rsiz, mdlen;                    // these don't overflow
 //    } sha3_ctx_t;
 //
-    /**
-     * This static class is implemented to behave as a union sharing the same st memory space.
-     */
-    static class sha3_ctx_t {
-        public byte[] b;
-        //public long[] q;
-        public int pt, rsiz, mdlen;
 
-        sha3_ctx_t() { // TODO: proper instantiation/arguments? getters/setters?
-            // b(uint8_t) and q(uint64_t) are originally a union named st.
-            this.b = new byte[200]; // uint8_t
-            //this.q = new long[25]; // uint64_t, removed in favor of byWord() / setWord()
-            // to simulate underlying mechanics of union sharing the st memory space.
-        }
-
-        /**
-         *
-         * @return an array of longs/words form of ctx.b
-         */
-        public long[] byWord() { // ctx.st.q is supposed to be uint64_t
-            // returns ctx.b as an array of longs/words
-            long[] words = new long[b.length/8];
-            for (int i = 0; i < 25; i++) {
-                var v = new long[8];
-                // extract necessary bytes from b
-                //System.arraycopy(this.b, i * 8, v, 0, 8);
-                for(int j=0; j < 8; j++) {
-                    v[j] = this.b[i*8 + j] & 0xFFL;
-                }
-
-            words[i] = v[7] |
-                    (v[6] << 8) |
-                    (v[5] << 16) |
-                    (v[4] << 24) |
-                    (v[3] << 32) |
-                    (v[2] << 40) |
-                    (v[1] << 48) |
-                    (v[0] << 56);
-        }
-            return words;
-        }
-        public void setWord(long[] words) {
-            // feeds the data given as words, into the bytewise store.
-            for(int w = 0; w < words.length; w++) {
-                long word = words[w];
-                // extract each byte from the given word
-                for(int i=0; i < 8; i++) { // extract 8 bytes from the long
-                    b[w*8 + i] = (byte) (((word >>> (7-i)*8)) & 0xFF);
-                }
-            }
-        }
-        public void setBytes(byte[] bytes) {
-            if(this.b.length < bytes.length) {
-                this.b = new byte[bytes.length];
-            }
-            System.arraycopy(bytes, 0, this.b, 0, bytes.length);
-        }
+    // SHAKE128 and SHAKE256 extensible-output functions
+//#define shake128_init(c) sha3_init(c, 16)
+    static sha3_ctx_t shake128_init(sha3_ctx_t c) {
+        sha3_init(c, 16);
+        return c;
     }
     // Compression function.
     //void sha3_keccakf(uint64_t st[25]);
@@ -132,13 +81,6 @@ public class Sha3 {
 
 // compute a sha3 hash (md) of given byte length from "in"
     //void sha3(int in, int inlen, sha3_ctx_t md, int mdlen);
-
-    // SHAKE128 and SHAKE256 extensible-output functions
-//#define shake128_init(c) sha3_init(c, 16)
-    static sha3_ctx_t shake128_init(sha3_ctx_t c) {
-        sha3_init(c, 16);
-        return c;
-    }
 
     //#define shake256_init(c) sha3_init(c, 32)
     static sha3_ctx_t shake256_init(sha3_ctx_t c) {
@@ -163,27 +105,27 @@ public class Sha3 {
 
         // NOTE: copying may not be performant. Possible refactor/optimization?
         long[] st = c.byWord();
-        for(int i=0; i < 25; i++)
+        for (int i = 0; i < 25; i++)
             st[i] = Long.reverseBytes(st[i]);
         // constants
-    long keccakf_rndc[] = {
-            0x0000000000000001L, 0x0000000000008082L, 0x800000000000808aL,
-                    0x8000000080008000L, 0x000000000000808bL, 0x0000000080000001L,
-                    0x8000000080008081L, 0x8000000000008009L, 0x000000000000008aL,
-                    0x0000000000000088L, 0x0000000080008009L, 0x000000008000000aL,
-                    0x000000008000808bL, 0x800000000000008bL, 0x8000000000008089L,
-                    0x8000000000008003L, 0x8000000000008002L, 0x8000000000000080L,
-                    0x000000000000800aL, 0x800000008000000aL, 0x8000000080008081L,
-                    0x8000000000008080L, 0x0000000080000001L, 0x8000000080008008L
-        } ;
-     var keccakf_rotc = new int[]{
-            1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14,
-                    27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44
-        } ;
-    var keccakf_piln = new int[]{
-            10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4,
-                    15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1
-        } ;
+        long[] keccakf_rndc = {
+                0x0000000000000001L, 0x0000000000008082L, 0x800000000000808aL,
+                0x8000000080008000L, 0x000000000000808bL, 0x0000000080000001L,
+                0x8000000080008081L, 0x8000000000008009L, 0x000000000000008aL,
+                0x0000000000000088L, 0x0000000080008009L, 0x000000008000000aL,
+                0x000000008000808bL, 0x800000000000008bL, 0x8000000000008089L,
+                0x8000000000008003L, 0x8000000000008002L, 0x8000000000000080L,
+                0x000000000000800aL, 0x800000008000000aL, 0x8000000080008081L,
+                0x8000000000008080L, 0x0000000080000001L, 0x8000000080008008L
+        };
+        var keccakf_rotc = new int[]{
+                1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14,
+                27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44
+        };
+        var keccakf_piln = new int[]{
+                10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4,
+                15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1
+        };
 
         // variables
         int j, r;
@@ -217,9 +159,7 @@ public class Sha3 {
 
             //  Chi
             for (j = 0; j < 25; j += 5) {
-                for (int i = 0; i < 5; i++) {
-                    bc[i] = st[j + i];
-                }
+                System.arraycopy(st, j, bc, 0, 5);
                 for (int i = 0; i < 5; i++) {
                     st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
                 }
@@ -228,21 +168,19 @@ public class Sha3 {
             st[0] ^= keccakf_rndc[r];
         }
 
-        for(int i=0; i < 25; i++) {
+        for (int i = 0; i < 25; i++) {
             st[i] = Long.reverseBytes(st[i]);
         }
         c.setWord(st);
     }
 
-// Initialize the context for SHA3
+    // Initialize the context for SHA3
     static void sha3_init(sha3_ctx_t c, int mdlen) {
         c.setWord(new long[25]);
         c.mdlen = mdlen;
         c.rsiz = 200 - 2 * mdlen;
         c.pt = 0;
     }
-
-// update state with more data
 
     static void sha3_update(sha3_ctx_t c, byte[] data, long len) { // void pointers?
         int j = c.pt;
@@ -257,11 +195,11 @@ public class Sha3 {
         c.pt = j;
     }
 
-    static void shake_update(sha3_ctx_t c, byte[] data, long len) {
-         sha3_update(c, data, len);
-     }
+// update state with more data
 
-// finalize and output a hash
+    static void shake_update(sha3_ctx_t c, byte[] data, long len) {
+        sha3_update(c, data, len);
+    }
 
     static void sha3_final(byte[] md, sha3_ctx_t c) throws IllegalArgumentException {
         if (md == null) {
@@ -272,22 +210,20 @@ public class Sha3 {
         c.b[c.rsiz - 1] ^= 0x80;
         sha3_keccakf(c);
 
-        for (int i = 0; i < c.mdlen; i++) {
-            md[i] = c.b[i];
-        }
+        if (c.mdlen >= 0) System.arraycopy(c.b, 0, md, 0, c.mdlen);
     }
 
-// compute a SHA-3 hash (md) of given byte length(mdlen) from "in"
+// finalize and output a hash
 
     public static void sha3(byte[] in, long inlen, byte[] md, int mdlen) {
         sha3_ctx_t sha3ctx = new sha3_ctx_t();
-        sha3_init( sha3ctx, mdlen);
-        sha3_update( sha3ctx, in, inlen);
+        sha3_init(sha3ctx, mdlen);
+        sha3_update(sha3ctx, in, inlen);
         sha3_final(md, sha3ctx);
         //return md;
     }
 
-// SHAKE128 and SHAKE256 extensible-output functionality
+// compute a SHA-3 hash (md) of given byte length(mdlen) from "in"
 
     static void shake_xof(sha3_ctx_t c) { // endian-ness? see KMACXOF256 lecture slides.
         c.b[c.pt] ^= 0x1F;
@@ -295,6 +231,8 @@ public class Sha3 {
         sha3_keccakf(c);
         c.pt = 0;
     }
+
+// SHAKE128 and SHAKE256 extensible-output functionality
 
     static void shake_out(sha3_ctx_t c, byte[] out, long len) {
 
@@ -304,15 +242,76 @@ public class Sha3 {
                 sha3_keccakf(c);
                 j = 0;
             }
-            out[i] =c.b[j++];
+            out[i] = c.b[j++];
         }
         c.pt = j;
     }
+
     public static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) { // TODO: if this is used in file parsing, need options.
             sb.append(String.format("%02X ", b));
         }
         return sb.toString();
+    }
+
+    /**
+     * This static class is implemented to behave as a union sharing the same st memory space.
+     */
+    static class sha3_ctx_t {
+        public byte[] b;
+        //public long[] q;
+        public int pt, rsiz, mdlen;
+
+        sha3_ctx_t() { // TODO: proper instantiation/arguments? getters/setters?
+            // b(uint8_t) and q(uint64_t) are originally a union named st.
+            this.b = new byte[200]; // uint8_t
+            //this.q = new long[25]; // uint64_t, removed in favor of byWord() / setWord()
+            // to simulate underlying mechanics of union sharing the st memory space.
+        }
+
+        /**
+         * @return an array of longs/words form of ctx.b
+         */
+        public long[] byWord() { // ctx.st.q is supposed to be uint64_t
+            // returns ctx.b as an array of longs/words
+            long[] words = new long[b.length / 8];
+            for (int i = 0; i < 25; i++) {
+                var v = new long[8];
+                // extract necessary bytes from b
+                //System.arraycopy(this.b, i * 8, v, 0, 8);
+                for (int j = 0; j < 8; j++) {
+                    v[j] = this.b[i * 8 + j] & 0xFFL;
+                }
+
+                words[i] = v[7] |
+                        (v[6] << 8) |
+                        (v[5] << 16) |
+                        (v[4] << 24) |
+                        (v[3] << 32) |
+                        (v[2] << 40) |
+                        (v[1] << 48) |
+                        (v[0] << 56);
+            }
+            return words;
+        }
+
+        public void setWord(long[] words) {
+            // feeds the data given as words, into the bytewise store.
+            for (int w = 0; w < words.length; w++) {
+                long word = words[w];
+                // extract each byte from the given word
+                for (int i = 0; i < 8; i++) { // extract 8 bytes from the long
+                    b[w * 8 + i] = (byte) (((word >>> (7 - i) * 8)) & 0xFF);
+                }
+            }
+        }
+
+        public void setBytes(byte[] bytes) {
+            if (this.b.length < bytes.length) {
+                this.b = new byte[bytes.length];
+            }
+            System.arraycopy(bytes, 0, this.b, 0, bytes.length);
+        }
     }
 }

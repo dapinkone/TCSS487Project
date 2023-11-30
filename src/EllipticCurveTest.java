@@ -9,13 +9,18 @@ public class EllipticCurveTest {
     //    EllipticCurve testCurve = new EllipticCurve();
     // constants
     final static BigInteger PRIME_P = ((BigInteger.valueOf(2).pow(448)).subtract(BigInteger.valueOf(2).pow(224))).subtract(BigInteger.ONE);
+    final static int sample_size = 50; // number of samples we take for randomized testing.
+    final static int N = PRIME_P.bitLength(); // maximum bitlength of our randomly gen'd numbers.
+    // (0, 1)
+    static final EllipticCurve.GoldilocksPair O = EllipticCurve.neutralElement;
+    // ( -3 mod P, sqrt((1 − x^2)/(1 + 39081x^2)) mod P.
+    static final EllipticCurve.GoldilocksPair G = EllipticCurve.G;
     private final EllipticCurve.GoldilocksPair publicGenerator = EllipticCurve.G;
+
+    // what tests to create
     // Neutral element: O := (0, 1)
     private final EllipticCurve.GoldilocksPair neutralElement = new EllipticCurve.GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
-
-    final static int sample_size = 50; // number of samples we take for randomized testing.
-    final static int N = PRIME_P.bitLength(); // maximum bitlength of our randomly gen'd numbers.
     // TODO:
     @Test
     public void testGoldilocksConstructor() {
@@ -23,8 +28,6 @@ public class EllipticCurveTest {
         Assertions.assertEquals(BigInteger.valueOf(1), pair.x);
         Assertions.assertEquals(BigInteger.valueOf(2), pair.y);
     }
-
-    // what tests to create
 
     /**
      * Testing if the sqaureRootModsP returns non null value correctly
@@ -71,11 +74,6 @@ public class EllipticCurveTest {
         var P = new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
         assert Arrays.equals(P.toByteArray(), EllipticCurve.PRIME_P.toByteArray());
     }
-
-    // (0, 1)
-    static final EllipticCurve.GoldilocksPair O = EllipticCurve.neutralElement;
-    // ( -3 mod P, sqrt((1 − x^2)/(1 + 39081x^2)) mod P.
-    static final EllipticCurve.GoldilocksPair G = EllipticCurve.G;
 
     @Test
     public void test_opposite() {
@@ -131,24 +129,26 @@ public class EllipticCurveTest {
     @Test
     public void test_random_k_t_1() {
         //𝑘 ⋅ 𝐺 = (𝑘 mod 𝑟) ⋅ 𝐺
-        for(int i =0; i < sample_size; i++) {
+        for (int i = 0; i < sample_size; i++) {
             var k = new BigInteger(N, 0, new SecureRandom());
             Assertions.assertEquals(G.exp(k), G.exp(k.mod(EllipticCurve.R)));
         }
     }
+
     @Test
     public void test_random_k_t_2() {
         var rand = new SecureRandom();
-        for(int i =0; i < sample_size; i++) {
+        for (int i = 0; i < sample_size; i++) {
             var k = new BigInteger(N, 0, rand);
             //(𝑘 + 1) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + 𝐺
             Assertions.assertEquals(G.exp(k.add(BigInteger.ONE)), G.exp(k).add(G));
         }
     }
+
     @Test
     public void test_random_k_t_3() {
         var rand = new SecureRandom();
-        for(int i =0; i < sample_size; i++) {
+        for (int i = 0; i < sample_size; i++) {
             var k = new BigInteger(N, 0, rand);
             var t = new BigInteger(N, 0, rand);
             //(𝑘 + 𝑡) ⋅ 𝐺 = (𝑘 ⋅ 𝐺) + (𝑡 ⋅ 𝐺)
@@ -161,6 +161,7 @@ public class EllipticCurveTest {
             //𝑘 ⋅ (𝑡 ⋅ 𝑃) = 𝑡 ⋅ (𝑘 ⋅ 𝐺) = (𝑘 ⋅ 𝑡 mod 𝑟) ⋅ 𝐺
         }
     }
+
     @Test
     public void test_add_1() {
         var a = new BigInteger("-1");
@@ -173,12 +174,13 @@ public class EllipticCurveTest {
         // A + (B + C) == (A + B) + C
         Assertions.assertEquals(B.add(C).add(A), A.add(B).add(C));
     }
+
     @Test
     public void test_add_2() {
         // (𝑘 ⋅ 𝐺) + ((ℓ ⋅ 𝐺) + (𝑚 ⋅ 𝐺)) = ((𝑘 ⋅ 𝐺) + (ℓ ⋅ 𝐺)) + (𝑚 ⋅ 𝐺)
         var rand = new SecureRandom();
 
-        for(int i = 0; i < sample_size; i++) {
+        for (int i = 0; i < sample_size; i++) {
             var k = new BigInteger(N, 0, rand);
             var l = new BigInteger(N, 0, rand);
             var m = new BigInteger(N, 0, rand);
@@ -189,7 +191,7 @@ public class EllipticCurveTest {
             // A + (B + C) == (A + B) + C
             Assertions.assertEquals(
                     K.add(L.add(M)), // K + (L + M)
-                            (K.add(L)).add(M)); // (K + L) + M
+                    (K.add(L)).add(M)); // (K + L) + M
         }
     }
 }

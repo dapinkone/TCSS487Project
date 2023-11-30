@@ -6,12 +6,12 @@ import static java.lang.Math.min;
 
 public class KMACXOF256 {
 
-    public static final int NUMBER_OF_BITS = 512; // 64 bytes = 512 bits
+//    public static final int NUMBER_OF_BITS = 512; // 64 bytes = 512 bits
 
     // basic operations & functions from FIPS 202
     public static byte[] xor(byte[] X, byte[] Y) {
         // X xor Y for strings of arbitrary but equal bit length.
-        for(int i=0; i < min(X.length, Y.length); i++) X[i] ^= Y[i];
+        for (int i = 0; i < min(X.length, Y.length); i++) X[i] ^= Y[i];
         return X;
     }
 
@@ -22,14 +22,14 @@ public class KMACXOF256 {
         // FIXME: left_encode should take all x such that 0 <= x < 2**2040
         // find n, the number of bytes required to encode x:
         int n = 0;
-        if(x == 0) return new byte[]{1, 0}; // edge case.
+        if (x == 0) return new byte[]{1, 0}; // edge case.
 
         long y = x; // copy x, and count the # of bytes.
-        while(y != 0) {
+        while (y != 0) {
             n++;
             y >>>= 8;
         }
-       // extract n bytes of x:
+        // extract n bytes of x:
         var b = new byte[n];
         for (int i = 0; i < n; i++) {
             b[n - i - 1] = (byte) (x & 0xFF);
@@ -38,10 +38,10 @@ public class KMACXOF256 {
         return appendBytes(new byte[]{(byte) n}, b);
     }
 
-
     /**
      * extends left_encode to function for bigintegers, as long as they're
      * less than 256 bytes.
+     *
      * @param x
      * @return
      */
@@ -49,12 +49,15 @@ public class KMACXOF256 {
         var b = x.toByteArray();
         return appendBytes(new byte[]{(byte) b.length}, b);
     }
+
     public static byte[] left_encode(byte[] b) {
         return appendBytes(new byte[]{(byte) b.length}, b);
     }
+
     /**
      * appends any number of byte arrays into a whole,
      * seen as .... || .... || ... || .... in the spec.
+     *
      * @param Xs given arguments of any number of byte arrays
      * @return all arguments appended together.
      */
@@ -67,7 +70,7 @@ public class KMACXOF256 {
         int ptr = 0; // keep track of where we are in newXs while copying.
         for (byte[] x : Xs) {
             // copy each array from Xs into newXs.
-            if(x == null) continue;
+            if (x == null) continue;
             System.arraycopy(x, 0, newXs, ptr, x.length);
             ptr += x.length;
         }
@@ -80,8 +83,10 @@ public class KMACXOF256 {
         // Return left_encode(len(S)) || S.
         return appendBytes(left_encode(S.length * 8L), S);
     }
+
     /**
      * Applied the NIST bytepad primitive to a byte array X with encoding factor w.
+     *
      * @param X byte array to bytepad
      * @param w encoding factor (the output length must be a multiple of w)
      * @return byte-padded byte array X with encoding factor w.
@@ -96,18 +101,19 @@ public class KMACXOF256 {
         assert w > 0;
         // 1. z = left_encode(w) || X
         byte[] encodedW = left_encode(w);
-        byte[] z = new byte[w * ((encodedW.length + X.length + w -1) / w)];
+        byte[] z = new byte[w * ((encodedW.length + X.length + w - 1) / w)];
         // NB:
         System.arraycopy(encodedW, 0, z, 0, encodedW.length);
         System.arraycopy(X, 0, z, encodedW.length, X.length);
         // 2. (nothing to do in software: Len(z) mod 8 = 0 in this byte-oriented implementation)
         // 3. while  (len(z) / 8) mod w != 0: z = z || 00000000
         for (int i = encodedW.length + X.length; i < z.length; i++) {
-            z[i] = (byte)0;
+            z[i] = (byte) 0;
         }
         return z;
     }
-//    public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
+
+    //    public byte[] cSHAKE(int mode, byte[] /*bitstring*/ X, int L, byte[] N, byte[] S) {
 //        /*
 //         - X is the main input bit string. It may be of any length3, including zero.
 //         - L is an integer representing the requested output length4 in bits.
@@ -173,7 +179,7 @@ public class KMACXOF256 {
 //        return Z;
 //    }
     public static void absorb(Sha3.sha3_ctx_t ctx, byte[] X) {
-        while(X.length > 136) {
+        while (X.length > 136) {
             var d = Arrays.copyOfRange(X, 0, 136);
             xor(ctx.b, d);
             Sha3.sha3_keccakf(ctx);
@@ -195,6 +201,7 @@ public class KMACXOF256 {
      * When no function other than cSHAKE is desired, N is set to the empty string.
      * • S is a customization bit string. The user selects this string to define a variant of the
      * function. When no customization is desired, S is set to the empty string5
+     *
      * @return byte[]
      */
     public static byte[] cSHAKE256(byte[] X, int L, byte[] N, byte[] S) {
@@ -208,19 +215,20 @@ public class KMACXOF256 {
         // rate(r) for cSHAKE256 is 136
         var bytepad_data = bytepad(appendBytes(encode_string(N), encode_string(S)), 136);
         absorb(ctx, appendBytes(bytepad_data, X)); // we handle the 00 aka 0x04 in absorb().
-        return squeeze(ctx, L/8);
+        return squeeze(ctx, L / 8);
     }
+
     static byte[] squeeze(Sha3.sha3_ctx_t ctx, int output_length) {
         // very similar to Sha3.shake_out ?
         var rate = 136;
-        var c = 1600/8 - rate; // n bits = r + c; c = n - r
+        var c = 1600 / 8 - rate; // n bits = r + c; c = n - r
         // state size n = r + c, or 200 bytes
 
         // squeeze?
         byte[] out = new byte[output_length];
         var ptr = 0;
-        while(ptr < output_length) {
-            if((output_length - ptr) >= rate) {
+        while (ptr < output_length) {
+            if ((output_length - ptr) >= rate) {
                 System.arraycopy(ctx.b, 0, out, ptr, rate);
                 ptr += rate;
             } else {
@@ -232,6 +240,7 @@ public class KMACXOF256 {
         }
         return out;
     }
+
     private static byte[] right_encode(int i) {
         // we only ever call right_encode(0).
         return new byte[]{(byte) 0, (byte) 1};
@@ -248,7 +257,7 @@ public class KMACXOF256 {
 
     private static byte[] randomBytes() {
         SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[NUMBER_OF_BITS / 8]; // 8 bits = 1 byte
+        byte[] bytes = new byte[512 / 8]; // 8 bits = 1 byte
         random.nextBytes(bytes);
         return bytes;
     }
@@ -268,11 +277,11 @@ public class KMACXOF256 {
         byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128);
 
         // c <- KMACXOF256(ke, "", |m|, "SKE") xor m
-        byte[] c = KMACXOF256(ke, "".getBytes(), m.length*8, "SKE".getBytes());
+        byte[] c = KMACXOF256(ke, "".getBytes(), m.length * 8, "SKE".getBytes());
         xor(c, m);
 
         // t <- KMACXOF256(ka, m , 512, "SKA")
-        var t =  KMACXOF256(ka, m, NUMBER_OF_BITS, "SKA".getBytes());
+        var t = KMACXOF256(ka, m, 512, "SKA".getBytes());
 
         // symmetric cyrptogram: (z, c, t)
         byte[] symmetricCryptogram = appendBytes(z, c, t);
@@ -284,14 +293,14 @@ public class KMACXOF256 {
         byte[] c = Arrays.copyOfRange(zct, 64, zct.length - 64); // middle portion
         byte[] t = Arrays.copyOfRange(zct, zct.length - 64, zct.length); // last 512 bits
 
-        byte[] ke_ka = KMACXOF256(appendBytes(z, pw),"".getBytes(),1024,"S".getBytes());
+        byte[] ke_ka = KMACXOF256(appendBytes(z, pw), "".getBytes(), 1024, "S".getBytes());
 
         // split (ke || ka) into two 512-bit keys
         byte[] ke = Arrays.copyOfRange(ke_ka, 0, 64);
         byte[] ka = Arrays.copyOfRange(ke_ka, 64, 128); // NOTE: L is in bits. range is in bytes. 128*8 = 1024.
 
         // m <- KMACXOF256(ke, "", |c|, "SKE") xor c
-        var m = xor(KMACXOF256(ke, "".getBytes(), c.length*8, "SKE".getBytes()), c);
+        var m = xor(KMACXOF256(ke, "".getBytes(), c.length * 8, "SKE".getBytes()), c);
 
         // tPrime <- KMACXOF256(ka, m, 512, "SKA")
         byte[] tPrime = KMACXOF256(ka, m, 512, "SKA".getBytes());

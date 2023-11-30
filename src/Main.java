@@ -1,15 +1,13 @@
 // main.c
 // 19-Nov-11  Markku-Juhani O. Saarinen <mjos@iki.fi>
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-
-import java.security.SecureRandom;
 import java.util.Arrays;
-import static java.util.Arrays.compare;
+import java.util.Objects;
+import java.util.Scanner;
 
 // read a hex string, return byte length or -1 on error.
 class Main {
@@ -19,10 +17,6 @@ class Main {
     private static final int DEFAULT_MODE = 256;
     private static final int NUMBER_OF_BYTES = 512;
 
-    enum Mode {
-        HASH, TAG, ENCRYPT, DECRYPT
-    }
-
     public static void main(String[] args) throws IOException {
         //run_tests();
         Mode modeSelected = null;
@@ -31,7 +25,7 @@ class Main {
         // parse mode flags
         if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
             System.out.printf("unknown command %s", args[0]);
-        } else if(args.length > 0){
+        } else if (args.length > 0) {
             switch (args[0].toLowerCase().charAt(1)) {
                 case 'h' -> modeSelected = Mode.HASH;
                 case 't' -> modeSelected = Mode.TAG;
@@ -47,7 +41,8 @@ class Main {
                 case "-fin" -> fin = args[ptr + 1];   // input from file.
                 case "-fout" -> fout = args[ptr + 1]; // output to file.
                 case "-fpw" -> fpw = args[ptr + 1]; // password as file.
-                case "-pw" -> pw = args[ptr + 1].getBytes(); // password as text.
+                case "-pw" ->
+                        pw = args[ptr + 1].getBytes(); // password as text.
             }
         }
         // if no commandline mode given, present menus:
@@ -103,40 +98,43 @@ class Main {
                         System.out.println("Invalid option. Please try again");
             }
         }
-            // collect necessary data from files (fin, fpw)
-            if(fpw != null && pw == null) // password file provided
-                pw = readFile(fpw);
-            else if(modeSelected != Mode.HASH && pw == null)
-                pw = prompt("password:").getBytes(); // prompt for password if needed.
-            if(fin != null) m = readFile(fin);
-            else m = prompt("Input file data: ").getBytes();
+        // collect necessary data from files (fin, fpw)
+        if (fpw != null && pw == null) // password file provided
+            pw = readFile(fpw);
+        else if (modeSelected != Mode.HASH && pw == null)
+            pw = prompt("password:").getBytes(); // prompt for password if needed.
+        if (fin != null) m = readFile(fin);
+        else m = prompt("Input file data: ").getBytes();
 
-            var out = switch(Objects.requireNonNull(modeSelected)) {
-                case HASH -> KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());// hash(m);
-                case TAG -> KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes()); // tag(m, pw);
-                case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
-                case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
-            };
+        var out = switch (Objects.requireNonNull(modeSelected)) {
+            case HASH ->
+                    KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());// hash(m);
+            case TAG ->
+                    KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes()); // tag(m, pw);
+            case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
+            case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
+        };
 
-            // results/output has been gathered, put said results where requested.
-            if(fout != null) {
-                System.out.println("writing data to " + fout);
-                    // write out to fout.
-                writeFile(fout, out);
-            } else {
-                if(modeSelected != Mode.DECRYPT)
-                    Sha3.phex(out); // not printable if it's binary data.
-                else
-                    for (byte b: out) {
-                        System.out.print((char) b);
-                    }
-            }
+        // results/output has been gathered, put said results where requested.
+        if (fout != null) {
+            System.out.println("writing data to " + fout);
+            // write out to fout.
+            writeFile(fout, out);
+        } else {
+            if (modeSelected != Mode.DECRYPT)
+                Sha3.phex(out); // not printable if it's binary data.
+            else
+                for (byte b : out) {
+                    System.out.print((char) b);
+                }
+        }
     }
 
     private static String prompt(String s) {
         System.out.print(s);
         return scanner.nextLine();
     }
+
     private static byte[] readFile(String filePath) throws IOException {
         try {
             System.out.println("Reading data from file: " + filePath);
@@ -145,6 +143,14 @@ class Main {
             System.out.println("Error reading file: " + e.getMessage());
             throw e;
         }
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 //    private static void hashFile() {
 //        System.out.print("Enter the file path to hash: ");
@@ -158,15 +164,7 @@ class Main {
 //        }
 //    }
 
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
-        }
-        return sb.toString();
-    }
-
-//    private static void macOfFile() {
+    //    private static void macOfFile() {
 //        System.out.print("Enter the file path for MAC computation: ");
 //        String filePath = scanner.nextLine();
 //        System.out.print("Enter the passphrase: ");
@@ -187,16 +185,8 @@ class Main {
             System.out.println("Error writing file: " + e.getMessage());
         }
     }
-//    private static byte[] encrypt(byte[] fileData /* m */, byte[] passphrase) {
-////        System.out.print("Enter the file path to encrypt: ");
-////        String filePath = scanner.nextLine();
-////        System.out.print("Enter the passphrase: ");
-////        String passphrase = scanner.nextLine();
-//            //byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-//            return KMACXOF256.symmetricEncrypt(fileData, passphrase);
-//    }
 
-//    private static void decryptFile() {
+    //    private static void decryptFile() {
 //        System.out.print("Enter the encrypted file path to decrypt: ");
 //        String filePath = scanner.nextLine();
 //        System.out.print("Enter the passphrase: ");
@@ -226,9 +216,18 @@ class Main {
             return ch - 'a' + 10;
         return -1;
     }
+//    private static byte[] encrypt(byte[] fileData /* m */, byte[] passphrase) {
+////        System.out.print("Enter the file path to encrypt: ");
+////        String filePath = scanner.nextLine();
+////        System.out.print("Enter the passphrase: ");
+////        String passphrase = scanner.nextLine();
+//            //byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+//            return KMACXOF256.symmetricEncrypt(fileData, passphrase);
+//    }
+
     static int test_readhex(byte[] buf, String str, int maxbytes) {
         int i, h, l;
-        for (i = 0; i < str.length()/2; i++) {
+        for (i = 0; i < str.length() / 2; i++) {
             h = test_hexdigit(str.charAt(2 * i));
             if (h < 0)
                 return i;
@@ -243,8 +242,8 @@ class Main {
     static int memcmp(byte[] sha, byte[] buf, int sha_len) {
         // TODO: Arrays.compare(sha, 0, sha_len, buf,0, sha_len) ?
         // checking if the first sha_len bytes of sha and buf are equal:
-         var eq = true;
-        for(int j=0; j < sha_len; j++) {
+        var eq = true;
+        for (int j = 0; j < sha_len; j++) {
             if (sha[j] != buf[j]) {
                 eq = false;
                 break;
@@ -252,7 +251,6 @@ class Main {
         }
         return eq ? 0 : -1;
     }
-    // returns zero on success, nonzero + stderr messages on failure
 
     static int test_sha3() {
         // message / digest pairs, lifted from ShortMsgKAT_SHA3-xxx.txt files
@@ -260,35 +258,35 @@ class Main {
 
         //const char *testvec[][2] = {
         String[][] testvec = {
-            {   // SHA3-224, corner case with 0-length message
-                "",
+                {   // SHA3-224, corner case with 0-length message
+                        "",
                         "6B4E03423667DBB73B6E15454F0EB1ABD4597F9A1B078E3F5B5A6BC7",
-            },
-            {   // SHA3-256, short message
-                    "9F2FCC7C90DE090D6B87CD7E9718C1EA6CB21118FC2D5DE9F97E5DB6AC1E9C10",
-                    "2F1A5F7159E34EA19CDDC70EBF9B81F1A66DB40615D7EAD3CC1F1B954D82A3AF"
-            },
-            {   // SHA3-384, exact block size
-                "E35780EB9799AD4C77535D4DDB683CF33EF367715327CF4C4A58ED9CBDCDD486" +
-                "F669F80189D549A9364FA82A51A52654EC721BB3AAB95DCEB4A86A6AFA93826D" +
-                "B923517E928F33E3FBA850D45660EF83B9876ACCAFA2A9987A254B137C6E140A" +
-                "21691E1069413848",
+                },
+                {   // SHA3-256, short message
+                        "9F2FCC7C90DE090D6B87CD7E9718C1EA6CB21118FC2D5DE9F97E5DB6AC1E9C10",
+                        "2F1A5F7159E34EA19CDDC70EBF9B81F1A66DB40615D7EAD3CC1F1B954D82A3AF"
+                },
+                {   // SHA3-384, exact block size
+                        "E35780EB9799AD4C77535D4DDB683CF33EF367715327CF4C4A58ED9CBDCDD486" +
+                                "F669F80189D549A9364FA82A51A52654EC721BB3AAB95DCEB4A86A6AFA93826D" +
+                                "B923517E928F33E3FBA850D45660EF83B9876ACCAFA2A9987A254B137C6E140A" +
+                                "21691E1069413848",
                         "D1C0FA85C8D183BEFF99AD9D752B263E286B477F79F0710B0103170173978133" +
-                "44B99DAF3BB7B1BC5E8D722BAC85943A"
-            },
-            {   // SHA3-512, multiblock message
-                "3A3A819C48EFDE2AD914FBF00E18AB6BC4F14513AB27D0C178A188B61431E7F5" +
-                "623CB66B23346775D386B50E982C493ADBBFC54B9A3CD383382336A1A0B2150A" +
-                "15358F336D03AE18F666C7573D55C4FD181C29E6CCFDE63EA35F0ADF5885CFC0" +
-                "A3D84A2B2E4DD24496DB789E663170CEF74798AA1BBCD4574EA0BBA40489D764" +
-                "B2F83AADC66B148B4A0CD95246C127D5871C4F11418690A5DDF01246A0C80A43" +
-                "C70088B6183639DCFDA4125BD113A8F49EE23ED306FAAC576C3FB0C1E256671D" +
-                "817FC2534A52F5B439F72E424DE376F4C565CCA82307DD9EF76DA5B7C4EB7E08" +
-                "5172E328807C02D011FFBF33785378D79DC266F6A5BE6BB0E4A92ECEEBAEB1",
-                    "6E8B8BD195BDD560689AF2348BDC74AB7CD05ED8B9A57711E9BE71E9726FDA45" +
-                "91FEE12205EDACAF82FFBBAF16DFF9E702A708862080166C2FF6BA379BC7FFC2"
-            }
-        } ;
+                                "44B99DAF3BB7B1BC5E8D722BAC85943A"
+                },
+                {   // SHA3-512, multiblock message
+                        "3A3A819C48EFDE2AD914FBF00E18AB6BC4F14513AB27D0C178A188B61431E7F5" +
+                                "623CB66B23346775D386B50E982C493ADBBFC54B9A3CD383382336A1A0B2150A" +
+                                "15358F336D03AE18F666C7573D55C4FD181C29E6CCFDE63EA35F0ADF5885CFC0" +
+                                "A3D84A2B2E4DD24496DB789E663170CEF74798AA1BBCD4574EA0BBA40489D764" +
+                                "B2F83AADC66B148B4A0CD95246C127D5871C4F11418690A5DDF01246A0C80A43" +
+                                "C70088B6183639DCFDA4125BD113A8F49EE23ED306FAAC576C3FB0C1E256671D" +
+                                "817FC2534A52F5B439F72E424DE376F4C565CCA82307DD9EF76DA5B7C4EB7E08" +
+                                "5172E328807C02D011FFBF33785378D79DC266F6A5BE6BB0E4A92ECEEBAEB1",
+                        "6E8B8BD195BDD560689AF2348BDC74AB7CD05ED8B9A57711E9BE71E9726FDA45" +
+                                "91FEE12205EDACAF82FFBBAF16DFF9E702A708862080166C2FF6BA379BC7FFC2"
+                }
+        };
 
         int i, fails, msg_len, sha_len;
         //uint8_t sha[ 64],buf[64], msg[256];
@@ -313,7 +311,7 @@ class Main {
                 //fprintf(stderr, "[%d] SHA3-%d, len %d test FAILED.\n",
                 System.out.printf(/*stderr, */"[%d] SHA3-%d, len %d test FAILED.\n",
                         i, sha_len * 8, msg_len);
-                for(var b : sha)
+                for (var b : sha)
                     System.out.printf("%02X", b);
                 System.out.println();
                 fails++;
@@ -324,8 +322,7 @@ class Main {
 
         return fails;
     }
-
-// test for SHAKE128 and SHAKE256
+    // returns zero on success, nonzero + stderr messages on failure
 
     static int test_shake() {
         // Test vectors have bytes 480..511 of XOF output for given inputs.
@@ -361,16 +358,16 @@ class Main {
 
             if (i >= 2) {                   // 1600-bit test pattern
                 //memset(buf, 0xA3, 20);
-                for(int x=0; x < 20; x++) buf[x] = (byte) 0xA3;
+                for (int x = 0; x < 20; x++) buf[x] = (byte) 0xA3;
 
                 for (j = 0; j < 200; j += 20)
                     Sha3.sha3_update(sha3, buf, 20);
             }
 
-            Sha3.shake_xof( sha3);               // switch to extensible output
+            Sha3.shake_xof(sha3);               // switch to extensible output
 
             for (j = 0; j < 512; j += 32)   // output. discard bytes 0..479
-                Sha3.shake_out( sha3, buf, 32);
+                Sha3.shake_out(sha3, buf, 32);
 
             // compare to reference
             test_readhex(ref, testhex[i], ref.length);
@@ -383,39 +380,42 @@ class Main {
 
         return fails;
     }
-/*
-// test speed of the comp
 
-    static void test_speed() {
-        int i;
-        uint64_t st[ 25],x, n;
-        clock_t bg, us;
+// test for SHAKE128 and SHAKE256
 
-        for (i = 0; i < 25; i++)
-            st[i] = i;
+    /*
+    // test speed of the comp
 
-        bg = clock();
-        n = 0;
-        do {
-            for (i = 0; i < 100000; i++)
-                sha3_keccakf(st);
-            n += i;
-            us = clock() - bg;
-        } while (us < 3 * CLOCKS_PER_SEC);
+        static void test_speed() {
+            int i;
+            uint64_t st[ 25],x, n;
+            clock_t bg, us;
 
-        x = 0;
-        for (i = 0; i < 25; i++)
-            x += st[i];
+            for (i = 0; i < 25; i++)
+                st[i] = i;
 
-        printf("(%016lX) %.3f Keccak-p[1600,24] / Second.\n",
-                (unsigned long)x, (CLOCKS_PER_SEC * ((double) n)) / ((double) us));
+            bg = clock();
+            n = 0;
+            do {
+                for (i = 0; i < 100000; i++)
+                    sha3_keccakf(st);
+                n += i;
+                us = clock() - bg;
+            } while (us < 3 * CLOCKS_PER_SEC);
+
+            x = 0;
+            for (i = 0; i < 25; i++)
+                x += st[i];
+
+            printf("(%016lX) %.3f Keccak-p[1600,24] / Second.\n",
+                    (unsigned long)x, (CLOCKS_PER_SEC * ((double) n)) / ((double) us));
 
 
-    }*/
+        }*/
     // main
     public static void run_tests() {
         if (Sha3_tests.test_sha3() == 0 && Sha3_tests.test_shake() == 0)
-            System.out.printf("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
+            System.out.print("FIPS 202 / SHA3, SHAKE128, SHAKE256 Self-Tests OK!\n");
         //test_speed();
 
         System.out.printf("sha3 words test: %s\n", Sha3_tests.words_test());
@@ -514,6 +514,10 @@ class Main {
 //            // throw exception/error that password is incorrect.
 //        }
 
+    }
+
+    enum Mode {
+        HASH, TAG, ENCRYPT, DECRYPT
     }
 
 }
