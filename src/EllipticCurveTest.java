@@ -209,4 +209,15 @@ public class EllipticCurveTest {
         var result = EllipticCurve.decrypt(zct, pw);
         assert Arrays.equals(result, m);
     }
+    @Test
+    public void test_verify_signiture() {
+        var m = "Lorem Ipsem 12345678910".getBytes();
+        var pw = "test password".getBytes();
+        var sig = EllipticCurve.generateSignature(m, pw);
+
+        // verifySignature() requires pub key V. generate from pw?
+        var V = EllipticCurve.generateKeyPair(pw).publicKey();
+
+        assert EllipticCurve.verifySignature(sig, V, m);
+    }
 }
