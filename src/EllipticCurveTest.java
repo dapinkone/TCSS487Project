@@ -194,4 +194,19 @@ public class EllipticCurveTest {
                     (K.add(L)).add(M)); // (K + L) + M
         }
     }
+    @Test
+    public void test_encrypt_decrypt_identity() {
+        var pw = "test password".getBytes();
+        // need to gen a public / private key pair.
+        var keyPair = EllipticCurve.generateKeyPair(pw);
+
+        // encrypt a message
+        var m = "Lorem Ipsem 12345678910".getBytes();
+        System.out.println(Arrays.toString(m));
+        var zct = EllipticCurve.encrypt(m, keyPair.publicKey());
+
+        // attempt decyrption
+        var result = EllipticCurve.decrypt(zct, pw);
+        assert Arrays.equals(result, m);
+    }
 }
