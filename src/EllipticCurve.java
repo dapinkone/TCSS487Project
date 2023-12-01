@@ -126,10 +126,10 @@ public class EllipticCurve {
         GoldilocksPair Z = new GoldilocksPair(false, new BigInteger(z_y));
 
         int c_len = zct[y_len + 1] & 0xFF;
-        byte[] c = Arrays.copyOfRange(zct, y_len + 1, y_len + 1 + c_len); // TODO: not using c?
+        byte[] c = Arrays.copyOfRange(zct, y_len + 2, y_len + 2 + c_len); // TODO: not using c?
 
-        int t_len = zct[y_len + 1 + c_len] & 0xFF;
-        byte[] t = Arrays.copyOfRange(zct, y_len + 1 + c_len, y_len + 1 + c_len + t_len);
+        int t_len = zct[y_len + 2 + c_len] & 0xFF;
+        byte[] t = Arrays.copyOfRange(zct, y_len + 3 + c_len, y_len + 3 + c_len + t_len);
         // length in zct[0], search from (1, zct[0] + 1)
 
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
@@ -147,8 +147,9 @@ public class EllipticCurve {
         byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
 
-        // 5. m <- KMACXOF256(ke, “”, |c|, “PKE”)  c
-        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length, "PKE".getBytes());
+        // 5. m <- KMACXOF256(ke, “”, |c|, “PKE”) ^ c
+        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length*8, "PKE".getBytes());
+        KMACXOF256.xor(m, c);
 
         // 6. t’ <- KMACXOF256(ka, m, 448, “PKA”)
         byte[] tPrime = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
