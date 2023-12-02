@@ -104,8 +104,9 @@ public class EllipticCurve {
         // append (t.length || t)
         byte[] leftEncodedT = KMACXOF256.left_encode(t);
 
+        //byte x_lsb = (byte) ((Z.x.testBit(Z.x.bitLength()-1)) ? 1 : 0); // (Z.x & 1) == 1
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
-        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.y), leftEncodedC, leftEncodedT);
+        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.x), KMACXOF256.left_encode(Z.y), leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
 
@@ -118,19 +119,30 @@ public class EllipticCurve {
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
         // TODO: possible rewrite using a left_decode() function?
-        // byte[] z_x
-        // length of z_y is encoded at 0th index
-        int y_len = zct[0] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
-        byte[] z_y = Arrays.copyOfRange(zct, 1, y_len + 1);
-        // TODO: (re?)store x_lsb ?
-        GoldilocksPair Z = new GoldilocksPair(false, new BigInteger(z_y));
+        // unpack different left encoded values from (Z, c, t)
+        // unpack Z_x
+        int ptr = 0;
+        int len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+        byte[] z_x = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
+        ptr += 1 + len;
 
-        int c_len = zct[y_len + 1] & 0xFF;
-        byte[] c = Arrays.copyOfRange(zct, y_len + 2, y_len + 2 + c_len); // TODO: not using c?
+        // unpack Z_y
+        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+        byte[] z_y = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
+        ptr += 1 + len;
 
-        int t_len = zct[y_len + 2 + c_len] & 0xFF;
-        byte[] t = Arrays.copyOfRange(zct, y_len + 3 + c_len, y_len + 3 + c_len + t_len);
-        // length in zct[0], search from (1, zct[0] + 1)
+        // unpack c
+        len = zct[ptr] & 0xFF;
+        byte[] c = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len); // TODO: not using c?
+        ptr += 1 + len;
+
+        // unpack t
+        len = zct[ptr] & 0xFF;
+        byte[] t = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
+
+        // unpacking complete, collect (Z_x, Z_y) into data structure for use:
+        // TODO: (re?)store x_lsb ? rather than z_x to save space
+        GoldilocksPair Z = new GoldilocksPair(new BigInteger(z_x), new BigInteger(z_y));
 
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
