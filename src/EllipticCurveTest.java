@@ -250,4 +250,24 @@ public class EllipticCurveTest {
 
         assert EllipticCurve.verifySignature(sig, V, m);
     }
+
+    /**
+     * tests the functionality of recovering V.x from V.y and x_lsb
+     */
+    @Test
+    public void test_f() {
+        int passes = 0;
+        for(int i=0; i < sample_size; i++) {
+            var pw = new BigInteger(448, EllipticCurve.RAND).toByteArray();
+            // need to gen a public / private key pair.
+            var keyPair = EllipticCurve.generateKeyPair(pw);
+            var V = keyPair.publicKey();
+            var lsb = V.x.and(BigInteger.ONE).equals(BigInteger.ONE);
+            if(EllipticCurve.f(V.y, lsb).equals( V.x)) {
+               passes++;
+            }
+        }
+        System.out.println(passes/sample_size*100);
+        assert passes==sample_size;
+    }
 }
