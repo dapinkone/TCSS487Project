@@ -174,7 +174,7 @@ public class EllipticCurve {
         var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes()))
                 .shiftLeft(2).mod(R);
 
-        //▪ k <- KMACXOF256(s, m, 448, “N”); k  4k (mod r)
+        //▪ k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
         var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, 448, "N".getBytes()))
                 .shiftLeft(2).mod(R);
 
