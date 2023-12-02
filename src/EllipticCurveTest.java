@@ -252,7 +252,19 @@ public class EllipticCurveTest {
 
         assert EllipticCurve.verifySignature(sig, V, m);
     }
+    @Test
+    public void test_verify_signiture_long() {
+            var m = new byte[1024];
+            EllipticCurve.RAND.nextBytes(m);
 
+            var pw = "test password".getBytes();
+            var sig = EllipticCurve.generateSignature(m, pw);
+
+            // verifySignature() requires pub key V. generate from pw?
+            var V = EllipticCurve.generateKeyPair(pw).publicKey();
+
+            assert (EllipticCurve.verifySignature(sig, V, m));
+    }
     /**
      * tests the functionality of recovering V.x from V.y and x_lsb
      */
