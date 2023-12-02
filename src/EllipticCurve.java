@@ -214,7 +214,9 @@ public class EllipticCurve {
         var h = hz[0];
         var z = hz[1];
 
+        // U <- z*G + h*V
         var U = G.exp(new BigInteger(z)).add(V.exp(new BigInteger(h)));
+        // accept if, and only if, KMACXOF256(Ux, m, 448, "T") = h
         var h_prime = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
         return h == h_prime;
     }
