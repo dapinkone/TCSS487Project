@@ -223,18 +223,22 @@ public class EllipticCurve {
      */
     public static byte[][] generateSignature(byte[] m, byte[] pw) {
         //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
-        var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes()))
+        var L = 448;
+        var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), L, "SK".getBytes()))
                 .shiftLeft(2).mod(R); // private key
 
         //▪ k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
-        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, 448, "N".getBytes()))
+        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, L, "N".getBytes()))
                 .shiftLeft(2).mod(R);
 
         //▪ U <- k*G;
         var U = G.exp(k);
 
         //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
-        var h = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
+        var h = new BigInteger(
+                KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes()))
+                .mod(R)
+                .toByteArray();
         var z = (k.subtract((new BigInteger(h)).multiply(s))).mod(R).toByteArray();
 
         //▪ signature: (h, z)
@@ -255,9 +259,10 @@ public class EllipticCurve {
         var z = hz[1];
         // U <- z*G + h*V
         var U = G.exp(new BigInteger(z)).add(V.exp(new BigInteger(h)));
+        var L = 448;
         // accept if, and only if, KMACXOF256(Ux, m, 448, "T") = h
-        var h_prime = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
-        return h == h_prime;
+        var h_prime = new BigInteger(KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes())).mod(R);
+        return h_prime.equals(new BigInteger(h));
     }
 
     public static BigInteger f(BigInteger x) { // default parameter for lsb
