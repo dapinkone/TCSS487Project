@@ -83,7 +83,9 @@ public class KMACXOF256 {
         // Return left_encode(len(S)) || S.
         return appendBytes(left_encode(S.length * 8L), S);
     }
-
+    static public byte[] encode_string(BigInteger S) {
+        return encode_string(S.toByteArray());
+    }
     /**
      * Applied the NIST bytepad primitive to a byte array X with encoding factor w.
      *
