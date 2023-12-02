@@ -195,19 +195,49 @@ public class EllipticCurveTest {
         }
     }
     @Test
-    public void test_encrypt_decrypt_identity() {
-        var pw = "test password".getBytes();
-        // need to gen a public / private key pair.
-        var keyPair = EllipticCurve.generateKeyPair(pw);
+    public void test_encrypt_decrypt_identity2() {
+        var passes = 0;
+        for(int i=0; i < sample_size; i++) {
+            // tests for a longer, random password.
+            var pw = new BigInteger(448, EllipticCurve.RAND).toByteArray();
+            // need to gen a public / private key pair.
+            var keyPair = EllipticCurve.generateKeyPair(pw);
 
-        // encrypt a message
-        var m = "Lorem Ipsem 12345678910".getBytes();
-        System.out.println(Arrays.toString(m));
-        var zct = EllipticCurve.encrypt(m, keyPair.publicKey());
+            // encrypt a message
+            var m2 = "test message abcdefg".getBytes();
+            var zct = EllipticCurve.encrypt(m2, keyPair.publicKey());
 
-        // attempt decyrption
-        var result = EllipticCurve.decrypt(zct, pw);
-        assert Arrays.equals(result, m);
+            // attempt decyrption
+            byte[] result;
+            try {
+                result = EllipticCurve.decrypt(zct, pw);
+            } catch(IllegalArgumentException e) {
+                result = new byte[]{};
+            }
+            //assert Arrays.equals(result, m2);
+            if(Arrays.equals(result, m2)) passes++;
+        }
+        assert passes == sample_size;
+    }
+    @Test
+    public void test_encrypt_decrypt_identity_long() {
+        for(int len=16; len < 512; len <<= 1) {
+            var pw = "test password".getBytes();
+            // need to gen a public / private key pair.
+            var keyPair = EllipticCurve.generateKeyPair(pw);
+
+            // encrypt a message
+            var m = new byte[57];
+            EllipticCurve.RAND.nextBytes(m);
+            var zct = EllipticCurve.encrypt(m, keyPair.publicKey());
+
+            // attempt decyrption
+            var result = EllipticCurve.decrypt(zct, pw);
+            if(!Arrays.equals(result, m)) {
+                System.out.println(len);
+                assert Arrays.equals(result, m);
+            }
+        }
     }
     @Test
     public void test_verify_signiture() {
