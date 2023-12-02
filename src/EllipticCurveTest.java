@@ -221,22 +221,24 @@ public class EllipticCurveTest {
     }
     @Test
     public void test_encrypt_decrypt_identity_long() {
-        for(int len=16; len < 512; len <<= 1) {
+        for(int len=100; len < 512; len++) {
             var pw = "test password".getBytes();
             // need to gen a public / private key pair.
             var keyPair = EllipticCurve.generateKeyPair(pw);
 
             // encrypt a message
-            var m = new byte[57];
+            var m = new byte[len];
             EllipticCurve.RAND.nextBytes(m);
             var zct = EllipticCurve.encrypt(m, keyPair.publicKey());
 
             // attempt decyrption
-            var result = EllipticCurve.decrypt(zct, pw);
-            if(!Arrays.equals(result, m)) {
+            byte[] result = new byte[]{};
+            try {
+                result = EllipticCurve.decrypt(zct, pw);
+            } catch(IllegalArgumentException e) {
                 System.out.println(len);
-                assert Arrays.equals(result, m);
             }
+            assert Arrays.equals(result, m);
         }
     }
     @Test
