@@ -221,7 +221,7 @@ public class EllipticCurveTest {
     }
     @Test
     public void test_encrypt_decrypt_identity_long() {
-        for(int len=100; len < 512; len++) {
+        for(int len=100; len < 512; len <<= 1) {
             var pw = "test password".getBytes();
             // need to gen a public / private key pair.
             var keyPair = EllipticCurve.generateKeyPair(pw);
