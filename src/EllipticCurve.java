@@ -109,7 +109,6 @@ public class EllipticCurve {
         return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.x), KMACXOF256.left_encode(Z.y), leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
-
     /**
      * Decrypt the zct[] message under a passphrase pw
      *
@@ -120,9 +119,10 @@ public class EllipticCurve {
     public static byte[] decrypt(byte[] zct, byte[] pw) {
         // TODO: possible rewrite using a left_decode() function?
         // unpack different left encoded values from (Z, c, t)
+        int ptr = 0; // points to the start of the current left_encode we're unpacking.
+        int len; // the length of the current left_encode
         // unpack Z_x
-        int ptr = 0;
-        int len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
         byte[] z_x = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
         ptr += 1 + len;
 
