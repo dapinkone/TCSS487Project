@@ -69,7 +69,6 @@ public class EllipticCurve {
         int value = 0;
         for(byte b : bytes) {
             value = (value << 8) + (b & 0xFF);
-            System.out.println(value);
         }
         return value;
     }
@@ -91,7 +90,6 @@ public class EllipticCurve {
 
             ptr += 1 + len;
             var arr = Arrays.copyOfRange(b, ptr, ptr + arr_len);
-            //System.out.println(Arrays.toString(arr));
             ptr += arr_len;
             lst.add(arr);
         }
