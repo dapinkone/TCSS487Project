@@ -243,7 +243,7 @@ class Main {
      * verify signature, sign a file, write private key
      */
     private static void handleAsymmetricPreconditions(Mode mode) throws IOException {
-        // TODO: public key is left_encoded. Retrieve public key correctly.
+
         // public key received pw
         // if pub file is provided
         switch (mode) {
@@ -279,7 +279,7 @@ class Main {
             // write out to fout.
             writeFile(fout, out);
         } else {
-            if (modeSelected != Mode.DECRYPT) //TODO: Need to account for Elliptic_Decrypt
+            if (modeSelected != Mode.DECRYPT && modeSelected != Mode.ELLIPTIC_DECRYPT)
                 Sha3.phex(out); // not printable if it's binary data.
             else
                 for (byte b : out) {
