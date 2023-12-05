@@ -58,6 +58,7 @@ class Main {
                 case 'q' -> modeSelected = Mode.PRIVATEKEY;
                 case 'i' -> modeSelected = Mode.ELLIPTIC_ENCRYPT;
                 case 'k' -> modeSelected = Mode.ELLIPTIC_DECRYPT;
+                case 's' -> modeSelected = Mode.SIGN;
                 default -> System.out.printf("Unknown flag: %s\n", args[0]);
             }
         }
@@ -89,10 +90,11 @@ class Main {
             System.out.println("5. Encrypt a data file");
             System.out.println("6. Decrypt a symmetric cryptogram");
             System.out.println("7. Exit");
-            System.out.println("8. Generate a public key");
+            System.out.println("8. Generate a public key of a file");
             System.out.println("9. Encrypt a private key");
             System.out.println("10. Encrypt a data file in asymmetric way");
             System.out.println("11. Decrypt an asymmetric cyrptogram");
+            System.out.println("12. Generate a public key of a text");
             System.out.print("Enter your choice: ");
 
             int choice = scanner.nextInt();
@@ -115,7 +117,6 @@ class Main {
                     modeSelected = Mode.TAG;
                     // collect text from STDIN
                 }
-                //tagOfText();
                 case 5 -> {
                     modeSelected = Mode.ENCRYPT;
                     fin = prompt(INPUT_PROMPT);
@@ -149,6 +150,10 @@ class Main {
                     modeSelected = Mode.ELLIPTIC_DECRYPT;
                     fin = prompt(INPUT_PROMPT);
                     pw = prompt("password").getBytes();
+                }
+                case 12 -> {
+                    modeSelected = Mode.PUBLICKEY;
+                    // Enter public key via STDIN
                 }
                 default ->
                         System.out.println("Invalid option. Please try again");
@@ -221,24 +226,6 @@ class Main {
     }
 
     /**
-     * Pre: currently takes left_encoded (G_Pair(y))
-     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
-     *
-     *
-     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
-     *                  if publicKey = left_encoded(y) || left_encoded(x)
-     * @return Goldilock pair retrieved from a public key file.
-     */
-    private static EllipticCurve.GoldilocksPair publicKeyToPoint(byte[] publicKey) {
-        // TODO: Does using
-        var decoded = EllipticCurve.byteStrDecode(publicKey);
-
-        byte[] G_x = decoded.get(0);
-        byte[] G_y = decoded.get(1);
-
-        return new EllipticCurve.GoldilocksPair(new BigInteger(G_x), new BigInteger(G_y));
-    }
-    /**
      * Asymmetric encryption performs elliptic_encrypt, elliptic_decrypt,
      * verify signature, sign a file, write private key
      */
@@ -269,8 +256,26 @@ class Main {
             }
 
         }
-
     }
+    /**
+     * Pre: currently takes left_encoded (G_Pair(y))
+     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
+     *
+     *
+     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
+     *                  if publicKey = left_encoded(y) || left_encoded(x)
+     * @return Goldilock pair retrieved from a public key file.
+     */
+    private static EllipticCurve.GoldilocksPair publicKeyToPoint(byte[] publicKey) {
+        // TODO: Does using
+        var decoded = EllipticCurve.byteStrDecode(publicKey);
+
+        byte[] G_x = decoded.get(0);
+        byte[] G_y = decoded.get(1);
+
+        return new EllipticCurve.GoldilocksPair(new BigInteger(G_x), new BigInteger(G_y));
+    }
+
 
     private static void outputResults(Mode modeSelected, byte[] out) {
         // results/output has been gathered, put said results where requested.
@@ -694,8 +699,8 @@ class Main {
         HASH, TAG, ENCRYPT, DECRYPT
         ,PUBLICKEY, PRIVATEKEY
         , ELLIPTIC_ENCRYPT
-        , ELLIPTIC_DECRYPT
-//        SIGN, VERIFY
+        , ELLIPTIC_DECRYPT, SIGN
+//        VERIFY
     }
 
 }
