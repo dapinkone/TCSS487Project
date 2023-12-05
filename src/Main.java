@@ -21,32 +21,19 @@ class Main {
 
         // parse mode flags
         Mode modeSelected = parseModFlags(args);
-        List<String> fin = new ArrayList<>();
 
-//        String fin = null,
+        String fin = null, pub = null;
         String fout = null, fpw = null; // file names
         byte[] pw = null, m = null;
 
-//        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
-//            System.out.printf("unknown command %s", args[0]);
-//        } else if (args.length > 0) {
-//            switch (args[0].toLowerCase().charAt(1)) {
-//                case 'h' -> modeSelected = Mode.HASH;
-//                case 't' -> modeSelected = Mode.TAG;
-//                case 'e' -> modeSelected = Mode.ENCRYPT;
-//                case 'd' -> modeSelected = Mode.DECRYPT;
-//                case 'g' -> modeSelected = Mode.PUBLICKEY;
-//                default -> System.out.printf("Unknown flag: %s\n", args[0]);
-//            }
-//        }
 
         // parse for input / output flags.
         for (int ptr = 1; ptr < args.length - 1; ptr++) {
             switch (args[ptr].toLowerCase()) {
-                // case "-fin" -> fin = args[ptr + 1]; // input from file
-                case "-fin" -> fin.add(args[ptr + 1]);   // input multiple files.
+                case "-fin" -> fin = args[ptr + 1];   // input from file.
                 case "-fout" -> fout = args[ptr + 1]; // output to file.
                 case "-fpw" -> fpw = args[ptr + 1]; // password as file.
+                case "-pub" -> pub = args[ptr + 1]; // public key as file.
                 case "-pw" ->
                         pw = args[ptr + 1].getBytes(); // password as text.
             }
@@ -73,8 +60,7 @@ class Main {
             switch (choice) {
                 case 1 -> {//hashFile();
                     modeSelected = Mode.HASH;
-                    // fin = prompt("file input:");// collect filename for fin.
-                    fin.set(0, prompt("file input:"));
+                    fin = prompt("file input:");// collect filename for fin.
                 }
                 case 2 -> {
                     modeSelected = Mode.HASH;
@@ -82,8 +68,7 @@ class Main {
                 }
                 case 3 -> {
                     modeSelected = Mode.TAG;
-                    // fin = prompt("file input:");
-                    fin.set(0, prompt("file input:"));
+                     fin = prompt("file input:");
                 }
                 case 4 -> {
                     modeSelected = Mode.TAG;
@@ -92,14 +77,14 @@ class Main {
                 //tagOfText();
                 case 5 -> {
                     modeSelected = Mode.ENCRYPT;
-                    // fin = prompt("file input:");
-                    fin.set(0, prompt("file input:"));
+                     fin = prompt("file input:");
+
                     pw = prompt("password:").getBytes();// collect pw
                 }
                 case 6 -> {
                     modeSelected = Mode.DECRYPT;
-                    // fin = prompt("file input:");
-                    fin.set(0, prompt("file input:"));
+                     fin = prompt("file input:");
+
                     pw = prompt("password:").getBytes();// collect pw
                 }
                 case 7 -> {
@@ -114,12 +99,10 @@ class Main {
                     modeSelected = Mode.PRIVATEKEY;
                     pw = prompt("password").getBytes();
                 }
-                case 10 -> {
-                    modeSelected = Mode.ELLIPTIC_ENCRYPT;
-                    // fin = prompt("file input:");
-                    fin.set(0, prompt("data input:"));
-                    fin.set(1, prompt("public key input:"));
-                }
+//                case 10 -> {
+//                    modeSelected = Mode.ELLIPTIC_ENCRYPT;
+//                     fin = prompt("file input:");
+//                }
                 default ->
                         System.out.println("Invalid option. Please try again");
             }
