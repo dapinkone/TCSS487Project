@@ -219,7 +219,7 @@ class Main {
         if (fpw != null && pw == null) // password file provided
             pw = readFile(fpw);
         else if (modeSelected != Mode.HASH && pw == null)
-            pw = prompt("password:").getBytes(); // prompt for password if needed.
+            pw = prompt("password: ").getBytes(); // prompt for password if needed.
 
         if (fin != null) m = readFile(fin);
         else m = prompt("Input file data: ").getBytes();
@@ -234,29 +234,34 @@ class Main {
         // public key received pw
         // if pub file is provided
         switch (mode) {
-            case ELLIPTIC_DECRYPT : // Decryption requires file & password
-            case PUBLICKEY : // public and private key require a password
 
+            case PUBLICKEY : // public and private key require a password
             case PRIVATEKEY : {
                 if (fpw != null && pw == null) // password file provided
                     pw = readFile(fpw);
                 else if (pw == null) {
-                    pw = prompt("password").getBytes();
+                    pw = prompt("password: ").getBytes();
                 }
-                if (fin != null) m = readFile(fin);
-                else m = prompt("Input file data: ").getBytes();
+                break;
             }
             case ELLIPTIC_ENCRYPT: {
                 // requires data, public key (file only)
-                if (fin != null) m = readFile(fin);
-                else m = prompt("Input file data: ").getBytes();
+                if (fin != null) {
+                    m = readFile(fin);
+                } else { m = prompt("Input file data: ").getBytes(); }
                 if (pub == null) {
-                    pub = prompt("public key").getBytes();
+                    pub = prompt("public key: ").getBytes();
                 }
+                break;
+            }
+            case ELLIPTIC_DECRYPT : {
+                // Decryption requires file & password
+
             }
 
         }
     }
+
     /**
      * Pre: currently takes left_encoded (G_Pair(y))
      * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
