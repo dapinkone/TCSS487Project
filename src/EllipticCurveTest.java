@@ -194,4 +194,97 @@ public class EllipticCurveTest {
                     (K.add(L)).add(M)); // (K + L) + M
         }
     }
+    @Test
+    public void test_encrypt_decrypt_identity2() {
+        var passes = 0;
+        for(int i=0; i < sample_size; i++) {
+            // tests for a longer, random password.
+            var pw = new BigInteger(448, EllipticCurve.RAND).toByteArray();
+            // need to gen a public / private key pair.
+            var keyPair = EllipticCurve.generateKeyPair(pw);
+
+            // encrypt a message
+            var m2 = "test message abcdefg".getBytes();
+            var zct = EllipticCurve.encrypt(m2, keyPair.publicKey());
+
+            // attempt decyrption
+            byte[] result;
+            try {
+                result = EllipticCurve.decrypt(zct, pw);
+            } catch(IllegalArgumentException e) {
+                result = new byte[]{};
+            }
+            //assert Arrays.equals(result, m2);
+            if(Arrays.equals(result, m2)) passes++;
+        }
+        assert passes == sample_size;
+    }
+    @Test
+    public void test_encrypt_decrypt_identity_long() {
+        for(int len=100; len < 512; len <<= 1) {
+            var pw = "test password".getBytes();
+            // need to gen a public / private key pair.
+            var keyPair = EllipticCurve.generateKeyPair(pw);
+
+            // encrypt a message
+            var m = new byte[len];
+            EllipticCurve.RAND.nextBytes(m);
+            var zct = EllipticCurve.encrypt(m, keyPair.publicKey());
+
+            // attempt decyrption
+            byte[] result = new byte[]{};
+            try {
+                result = EllipticCurve.decrypt(zct, pw);
+            } catch(IllegalArgumentException e) {
+                System.out.println(len);
+            }
+            assert Arrays.equals(result, m);
+        }
+    }
+    @Test
+    public void test_verify_signiture() {
+        var m = "Lorem Ipsem 12345678910".getBytes();
+        var pw = "test password".getBytes();
+        var sig = EllipticCurve.generateSignature(m, pw);
+
+        // verifySignature() requires pub key V. generate from pw?
+        var V = EllipticCurve.generateKeyPair(pw).publicKey();
+
+        assert EllipticCurve.verifySignature(sig, V, m);
+    }
+    @Test
+    public void test_verify_signiture_long() {
+        for(int i=0; i < sample_size; i++) {
+            var m = new byte[1024*10];
+            EllipticCurve.RAND.nextBytes(m);
+
+            var pw = new byte[300];
+            EllipticCurve.RAND.nextBytes(pw);
+            var sig = EllipticCurve.generateSignature(m, pw);
+
+            // verifySignature() requires pub key V. generate from pw?
+            var V = EllipticCurve.generateKeyPair(pw).publicKey();
+
+            assert (EllipticCurve.verifySignature(sig, V, m));
+        }
+    }
+    /**
+     * tests the functionality of recovering V.x from V.y and x_lsb
+     */
+    @Test
+    public void test_f() {
+        int passes = 0;
+        for(int i=0; i < sample_size; i++) {
+            var pw = new BigInteger(448, EllipticCurve.RAND).toByteArray();
+            // need to gen a public / private key pair.
+            var keyPair = EllipticCurve.generateKeyPair(pw);
+            var V = keyPair.publicKey();
+            var lsb = V.x.and(BigInteger.ONE).equals(BigInteger.ONE);
+            if(EllipticCurve.f(V.y, lsb).equals( V.x)) {
+               passes++;
+            }
+        }
+        System.out.println(passes/sample_size*100);
+        assert passes==sample_size;
+    }
 }

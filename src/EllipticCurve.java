@@ -1,5 +1,6 @@
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import static java.math.BigInteger.ONE;
@@ -64,7 +65,36 @@ public class EllipticCurve {
         random.nextBytes(bytes);
         return bytes;
     }
+    public static int bytesToInt(byte[] bytes) {
+        int value = 0;
+        for(byte b : bytes) {
+            value = (value << 8) + (b & 0xFF);
+        }
+        return value;
+    }
 
+    /**
+     * unmarshals an arbitrary number of encode_string's from a given byte[]
+     * @param b byte string, presumably with encoded strings
+     * @return arraylist of separated byte strings
+     */
+    public static ArrayList<byte[]> byteStrDecode(byte[] b) {
+        int ptr = 0;
+        var lst = new ArrayList<byte[]>();
+        while(ptr < b.length) { // points to the start of the current left_encode we're unpacking.
+            int len; // the length of the current left_encode(arr.length)
+            len = b[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+
+            // length of the byte array
+            var arr_len = bytesToInt(Arrays.copyOfRange(b, ptr + 1, ptr + 1 + len)) / 8;
+
+            ptr += 1 + len;
+            var arr = Arrays.copyOfRange(b, ptr, ptr + arr_len);
+            ptr += arr_len;
+            lst.add(arr);
+        }
+        return lst;
+    }
     /**
      * Encrypts a byte array m, under the (Schnorr/DHIES) public key
      *
@@ -98,17 +128,18 @@ public class EllipticCurve {
         byte[] c = KMACXOF256.KMACXOF256(ke, "".getBytes(), m.length * 8, "PKE".getBytes());
         KMACXOF256.xor(c, m);
         // append (c.length || c) appendBytes(new byte[]{(byte) xLength}, c)
-        byte[] leftEncodedC = KMACXOF256.left_encode(c);
+        byte[] leftEncodedC = KMACXOF256.encode_string(c);
         // t <- KMACXOF256(ka, m, 448, "PKA")
         byte[] t = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
         // append (t.length || t)
-        byte[] leftEncodedT = KMACXOF256.left_encode(t);
+        byte[] leftEncodedT = KMACXOF256.encode_string(t);
 
+        //byte x_lsb = (byte) ((Z.x.testBit(Z.x.bitLength()-1)) ? 1 : 0); // (Z.x & 1) == 1
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
-        return KMACXOF256.appendBytes(KMACXOF256.left_encode(Z.y), leftEncodedC, leftEncodedT);
+        return KMACXOF256.appendBytes(KMACXOF256.encode_string(Z.x),
+                KMACXOF256.encode_string(Z.y), leftEncodedC, leftEncodedT);
         // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
-
     /**
      * Decrypt the zct[] message under a passphrase pw
      *
@@ -118,25 +149,44 @@ public class EllipticCurve {
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
         // TODO: possible rewrite using a left_decode() function?
-        // byte[] z_x
-        // length of z_y is encoded at 0th index
-        int y_len = zct[0] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
-        byte[] z_y = Arrays.copyOfRange(zct, 1, y_len + 1);
-        // TODO: (re?)store x_lsb ?
-        GoldilocksPair Z = new GoldilocksPair(false, new BigInteger(z_y));
+        // unpack different left encoded values from (Z, c, t)
+        var decoded = byteStrDecode(zct);
+        var z_x = decoded.get(0);
+        var z_y = decoded.get(1);
+        var c = decoded.get(2);
+        var t = decoded.get(3);
+//        int ptr = 0; // points to the start of the current left_encode we're unpacking.
+//        int len; // the length of the current left_encode
+//        // unpack Z_x
+//        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+//        byte[] z_x = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
+//        ptr += 1 + len;
+//
+//        // unpack Z_y
+//        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
+//        byte[] z_y = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
+//        ptr += 1 + len;
+//
+//        // unpack c
+//        len = zct[ptr] & 0xFF;
+//        byte[] c = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len); // TODO: not using c?
+//        ptr += 1 + len;
+//
+//        // unpack t
+//        len = zct[ptr] & 0xFF;
+//        byte[] t = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
 
-        int c_len = zct[y_len + 1] & 0xFF;
-        byte[] c = Arrays.copyOfRange(zct, y_len + 1, y_len + 1 + c_len); // TODO: not using c?
-
-        int t_len = zct[y_len + 1 + c_len] & 0xFF;
-        byte[] t = Arrays.copyOfRange(zct, y_len + 1 + c_len, y_len + 1 + c_len + t_len);
-        // length in zct[0], search from (1, zct[0] + 1)
+        // unpacking complete, collect (Z_x, Z_y) into data structure for use:
+        // TODO: (re?)store x_lsb ? rather than z_x to save space
+        var x_lsb = (z_x[z_x.length - 1] & 1) == 1;
+        //GoldilocksPair Z = new GoldilocksPair(new BigInteger(z_x), new BigInteger(z_y));
+        GoldilocksPair Z = new GoldilocksPair(x_lsb, new BigInteger(z_y));
 
         // 1. s <- KMACXOF256(pw, "", 448, "SK")
         byte[] s = KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes());
 
         // 2. s <- 4s mod r
-        BigInteger bigS = new BigInteger(s).shiftLeft(2).mod(R);
+        BigInteger bigS = new BigInteger(s).shiftLeft(2).mod(R); // private key
 
         // 3. W <- s*Z
         GoldilocksPair W = Z.exp(bigS);
@@ -147,8 +197,9 @@ public class EllipticCurve {
         byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
 
-        // 5. m <- KMACXOF256(ke, “”, |c|, “PKE”)  c
-        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length, "PKE".getBytes());
+        // 5. m <- KMACXOF256(ke, “”, |c|, “PKE”) ^ c
+        byte[] m = KMACXOF256.KMACXOF256(ke, "".getBytes(), c.length*8, "PKE".getBytes());
+        KMACXOF256.xor(m, c);
 
         // 6. t’ <- KMACXOF256(ka, m, 448, “PKA”)
         byte[] tPrime = KMACXOF256.KMACXOF256(ka, m, 448, "PKA".getBytes());
@@ -170,18 +221,22 @@ public class EllipticCurve {
      */
     public static byte[][] generateSignature(byte[] m, byte[] pw) {
         //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
-        var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), 448, "SK".getBytes()))
-                .shiftLeft(2).mod(R);
+        var L = 448;
+        var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), L, "SK".getBytes()))
+                .shiftLeft(2).mod(R); // private key
 
-        //▪ k <- KMACXOF256(s, m, 448, “N”); k  4k (mod r)
-        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, 448, "N".getBytes()))
+        //▪ k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
+        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, L, "N".getBytes()))
                 .shiftLeft(2).mod(R);
 
         //▪ U <- k*G;
         var U = G.exp(k);
 
         //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
-        var h = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
+        var h = new BigInteger(
+                KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes()))
+                .mod(R)
+                .toByteArray();
         var z = (k.subtract((new BigInteger(h)).multiply(s))).mod(R).toByteArray();
 
         //▪ signature: (h, z)
@@ -200,10 +255,12 @@ public class EllipticCurve {
         // TODO: should be able to pass in and destructure signature (h, z) as byte[]
         var h = hz[0];
         var z = hz[1];
-
+        // U <- z*G + h*V
         var U = G.exp(new BigInteger(z)).add(V.exp(new BigInteger(h)));
-        var h_prime = KMACXOF256.KMACXOF256(U.x.toByteArray(), m, 448, "T".getBytes());
-        return h == h_prime;
+        var L = 448;
+        // accept if, and only if, KMACXOF256(Ux, m, 448, "T") = h
+        var h_prime = new BigInteger(KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes())).mod(R);
+        return h_prime.equals(new BigInteger(h));
     }
 
     public static BigInteger f(BigInteger x) { // default parameter for lsb
