@@ -152,7 +152,7 @@ class Main {
         //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
             //      be encrypted in ellipticCurve encryption(byte[] m, GoldilockPair)
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
-            case ELLIPTIC_ENCRYPT ->
+//            case ELLIPTIC_ENCRYPT ->
         };
 
         // results/output has been gathered, put said results where requested.
@@ -596,7 +596,8 @@ class Main {
 
     enum Mode {
         HASH, TAG, ENCRYPT, DECRYPT
-        ,PUBLICKEY, PRIVATEKEY, ELLIPTIC_ENCRYPT
+        ,PUBLICKEY, PRIVATEKEY
+//        , ELLIPTIC_ENCRYPT
 //        , ELLIPTIC_DECRYPT,
 //        SIGN, VERIFY
     }
