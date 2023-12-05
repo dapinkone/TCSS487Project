@@ -38,6 +38,32 @@ class Main {
 
     }
 
+    /**
+     * Helper function in the Main.
+     *
+     * @param args Commandline input.
+     * @return Chosen mode by the user.
+     */
+    public static Mode parseModFlags(String[] args) {
+        Mode modeSelected = null;
+        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
+            System.out.printf("unknown command %s", args[0]);
+        } else if (args.length > 0) {
+            switch (args[0].toLowerCase().charAt(1)) {
+                case 'h' -> modeSelected = Mode.HASH;
+                case 't' -> modeSelected = Mode.TAG;
+                case 'e' -> modeSelected = Mode.ENCRYPT;
+                case 'd' -> modeSelected = Mode.DECRYPT;
+                case 'p' -> modeSelected = Mode.PUBLICKEY;
+                case 'q' -> modeSelected = Mode.PRIVATEKEY;
+                case 'i' -> modeSelected = Mode.ELLIPTIC_ENCRYPT;
+                case 'k' -> modeSelected = Mode.ELLIPTIC_DECRYPT;
+                default -> System.out.printf("Unknown flag: %s\n", args[0]);
+            }
+        }
+        return modeSelected;
+    }
+
     private static void parseInputOutputFlags(String[] args) {
         for (int ptr = 1; ptr < args.length - 1; ptr++) {
             switch (args[ptr].toLowerCase()) {
@@ -167,7 +193,7 @@ class Main {
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
 
             case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, publicKeyToPoint(pub));
-            case ELLIPTIC_DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw); // TODO: Filler function. Replace it with Elliptic Decryption
+            case ELLIPTIC_DECRYPT -> EllipticCurve.decrypt(m, pw);
             default -> throw new IllegalArgumentException("Unsupported encryption mode: " + modeSelected);
         };
         return out;
@@ -221,6 +247,7 @@ class Main {
         // public key received pw
         // if pub file is provided
         switch (mode) {
+            case ELLIPTIC_DECRYPT : // Decryption requires file & password
             case PUBLICKEY : // public and private key require a password
 
             case PRIVATEKEY : {
@@ -240,8 +267,7 @@ class Main {
                     pub = prompt("public key").getBytes();
                 }
             }
-            case ELLIPTIC_DECRYPT:
-            // TODO: Write the Decryption.
+
         }
 
     }
@@ -261,6 +287,7 @@ class Main {
                 }
         }
     }
+
     /**
      * Encrypts a text input with a public key.
      *
@@ -275,30 +302,7 @@ class Main {
 
         return EllipticCurve.encrypt(m, v);
     }
-    /**
-     * Helper function in the Main.
-     *
-     * @param args Commandline input.
-     * @return Chosen mode by the user.
-     */
-    public static Mode parseModFlags(String[] args) {
-        Mode modeSelected = null;
-        if (args.length > 0 && args[0].charAt(0) != '-') { // not a valid flag.
-            System.out.printf("unknown command %s", args[0]);
-        } else if (args.length > 0) {
-            switch (args[0].toLowerCase().charAt(1)) {
-                case 'h' -> modeSelected = Mode.HASH;
-                case 't' -> modeSelected = Mode.TAG;
-                case 'e' -> modeSelected = Mode.ENCRYPT;
-                case 'd' -> modeSelected = Mode.DECRYPT;
-                case 'p' -> modeSelected = Mode.PUBLICKEY;
-                case 'q' -> modeSelected = Mode.PRIVATEKEY;
-                case 'i' -> modeSelected = Mode.ELLIPTIC_ENCRYPT;
-                default -> System.out.printf("Unknown flag: %s\n", args[0]);
-            }
-        }
-        return modeSelected;
-    }
+
 
     private static String prompt(String s) {
         System.out.print(s);
