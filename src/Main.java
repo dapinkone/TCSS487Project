@@ -16,18 +16,10 @@ class Main {
     private static final int DEFAULT_MODE = 256;
     private static final int NUMBER_OF_BYTES = 512;
 
-    public static void main(String[] args) throws IOException {
-        //run_tests();
+    private static String fin = null, pub = null, fout = null, fpw = null;
+    private static byte[] pw = null, m = null;
 
-        // parse mode flags
-        Mode modeSelected = parseModFlags(args);
-
-        String fin = null, pub = null;
-        String fout = null, fpw = null; // file names
-        byte[] pw = null, m = null;
-
-
-        // parse for input / output flags.
+    private static void parseInputOutputFlags(String[] args) {
         for (int ptr = 1; ptr < args.length - 1; ptr++) {
             switch (args[ptr].toLowerCase()) {
                 case "-fin" -> fin = args[ptr + 1];   // input from file.
@@ -38,7 +30,9 @@ class Main {
                         pw = args[ptr + 1].getBytes(); // password as text.
             }
         }
+    }
 
+    private static void handleUserInteraction(Mode modeSelected) {
         // if no commandline mode given, present menus:
         while (modeSelected == null) {
             System.out.println("Welcome to the encryption");
@@ -52,6 +46,7 @@ class Main {
             System.out.println("7. Exit");
             System.out.println("8. Generate a public key");
             System.out.println("9. Encrypt a private key");
+            System.out.println("10. Encrypt a data file in asymmetric way");
             System.out.print("Enter your choice: ");
 
             int choice = scanner.nextInt();
@@ -68,7 +63,7 @@ class Main {
                 }
                 case 3 -> {
                     modeSelected = Mode.TAG;
-                     fin = prompt("file input:");
+                    fin = prompt("file input:");
                 }
                 case 4 -> {
                     modeSelected = Mode.TAG;
@@ -77,13 +72,13 @@ class Main {
                 //tagOfText();
                 case 5 -> {
                     modeSelected = Mode.ENCRYPT;
-                     fin = prompt("file input:");
+                    fin = prompt("file input:");
 
                     pw = prompt("password:").getBytes();// collect pw
                 }
                 case 6 -> {
                     modeSelected = Mode.DECRYPT;
-                     fin = prompt("file input:");
+                    fin = prompt("file input:");
 
                     pw = prompt("password:").getBytes();// collect pw
                 }
@@ -99,25 +94,166 @@ class Main {
                     modeSelected = Mode.PRIVATEKEY;
                     pw = prompt("password").getBytes();
                 }
-//                case 10 -> {
-//                    modeSelected = Mode.ELLIPTIC_ENCRYPT;
-//                     fin = prompt("file input:");
-//                }
+                case 10 -> {
+                    modeSelected = Mode.ELLIPTIC_ENCRYPT;
+                    fin = prompt("file input:");
+                    pub = prompt("public key input");
+                }
                 default ->
                         System.out.println("Invalid option. Please try again");
             }
         }
+    }
+
+    public static void main(String[] args) throws IOException {
+        //run_tests();
+
+        // parse mode flags
+        Mode modeSelected = parseModFlags(args);
+        parseInputOutputFlags(args);
+        handleUserInteraction(modeSelected);
+        performOperationBasedOnMode(modeSelected);
+        byte[] out = performOperationBasedOnMode(modeSelected);
+        outputResults(modeSelected, out);
+
+        // parse for input / output flags.
+//        for (int ptr = 1; ptr < args.length - 1; ptr++) {
+//            switch (args[ptr].toLowerCase()) {
+//                case "-fin" -> fin = args[ptr + 1];   // input from file.
+//                case "-fout" -> fout = args[ptr + 1]; // output to file.
+//                case "-fpw" -> fpw = args[ptr + 1]; // password as file.
+//                case "-pub" -> pub = args[ptr + 1]; // public key as file.
+//                case "-pw" ->
+//                        pw = args[ptr + 1].getBytes(); // password as text.
+//            }
+//        }
+
+//        // if no commandline mode given, present menus:
+//        while (modeSelected == null) {
+//            System.out.println("Welcome to the encryption");
+//            System.out.println("\nPlease choose a number below:");
+//            System.out.println("1. Compute a cryptographic hash of a file");
+//            System.out.println("2. Compute a cryptographic hash of text");
+//            System.out.println("3. Compute an authentication tag of a file");
+//            System.out.println("4. Compute an authentication tag of a text");
+//            System.out.println("5. Encrypt a data file");
+//            System.out.println("6. Decrypt a symmetric cryptogram");
+//            System.out.println("7. Exit");
+//            System.out.println("8. Generate a public key");
+//            System.out.println("9. Encrypt a private key");
+//            System.out.println("10. Encrypt a data file in asymmetric way");
+//            System.out.print("Enter your choice: ");
+//
+//            int choice = scanner.nextInt();
+//            scanner.nextLine();
+//
+//            switch (choice) {
+//                case 1 -> {//hashFile();
+//                    modeSelected = Mode.HASH;
+//                    fin = prompt("file input:");// collect filename for fin.
+//                }
+//                case 2 -> {
+//                    modeSelected = Mode.HASH;
+//                    // collect text from STDIN
+//                }
+//                case 3 -> {
+//                    modeSelected = Mode.TAG;
+//                     fin = prompt("file input:");
+//                }
+//                case 4 -> {
+//                    modeSelected = Mode.TAG;
+//                    // collect text from STDIN
+//                }
+//                //tagOfText();
+//                case 5 -> {
+//                    modeSelected = Mode.ENCRYPT;
+//                     fin = prompt("file input:");
+//
+//                    pw = prompt("password:").getBytes();// collect pw
+//                }
+//                case 6 -> {
+//                    modeSelected = Mode.DECRYPT;
+//                     fin = prompt("file input:");
+//
+//                    pw = prompt("password:").getBytes();// collect pw
+//                }
+//                case 7 -> {
+//                    System.out.println("Exiting Encryption");
+//                    System.exit(0);
+//                }
+//                case 8 -> {
+//                    modeSelected = Mode.PUBLICKEY;
+//                    pw = prompt("password").getBytes(); // collect pw
+//                }
+//                case 9 -> {
+//                    modeSelected = Mode.PRIVATEKEY;
+//                    pw = prompt("password").getBytes();
+//                }
+//                case 10 -> {
+//                    modeSelected = Mode.ELLIPTIC_ENCRYPT;
+//                     fin = prompt("file input:");
+//                     pub = prompt("public key input");
+//                }
+//                default ->
+//                        System.out.println("Invalid option. Please try again");
+//            }
+//        }
 
         // collect necessary data from files (fin, fpw)
+//        if (fpw != null && pw == null) // password file provided
+//            pw = readFile(fpw);
+//        else if (modeSelected != Mode.HASH && pw == null)
+//            pw = prompt("password:").getBytes(); // prompt for password if needed.
+//
+//        if (fin != null) m = readFile(fin);
+//        else m = prompt("Input file data: ").getBytes();
+//
+//        var out = switch (Objects.requireNonNull(modeSelected)) {
+//            case HASH ->
+//                    KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());// hash(m);
+//            case TAG ->
+//                    KMACXOF256.KMACXOF256(pw, m, 512, "T".getBytes()); // tag(m, pw);
+//            case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
+//            case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
+//
+//            // returns public key's y coordinate.
+//            // TODO: If public key is V = s * G, should public key be stored as byte[] or x coordinate of Goldilock
+////            case PUBLICKEY -> EllipticCurve.generateKeyPair(pw).publicKey().y.toByteArray();
+//            case PUBLICKEY -> KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().y);
+////                    KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
+//
+//            // TODO: If private key is encrypted with passphrase,
+//        //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
+//            //      be encrypted in ellipticCurve encryption(byte[] m, GoldilockPair)
+//            case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
+//            case ELLIPTIC_ENCRYPT ->
+//        };
+
+
+//        if (fout != null) {
+//            System.out.println("writing data to " + fout);
+//            // write out to fout.
+//            writeFile(fout, out);
+//        } else {
+//            if (modeSelected != Mode.DECRYPT) //TODO: Need to account for Elliptic_Decrypt
+//                Sha3.phex(out); // not printable if it's binary data.
+//            else
+//                for (byte b : out) {
+//                    System.out.print((char) b);
+//                }
+//        }
+    }
+
+    private static byte[] performOperationBasedOnMode(Mode modeSelected) throws IOException {
         if (fpw != null && pw == null) // password file provided
             pw = readFile(fpw);
         else if (modeSelected != Mode.HASH && pw == null)
             pw = prompt("password:").getBytes(); // prompt for password if needed.
-        // TODO: Need to revise how to accept multiple files (a data file and a public key file)
+
         if (fin != null) m = readFile(fin);
         else m = prompt("Input file data: ").getBytes();
 
-        var out = switch (Objects.requireNonNull(modeSelected)) {
+        byte[] out = switch (Objects.requireNonNull(modeSelected)) {
             case HASH ->
                     KMACXOF256.KMACXOF256("".getBytes(), m, 512, "D".getBytes());// hash(m);
             case TAG ->
@@ -132,12 +268,15 @@ class Main {
 //                    KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
 
             // TODO: If private key is encrypted with passphrase,
-        //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
+            //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
             //      be encrypted in ellipticCurve encryption(byte[] m, GoldilockPair)
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
-//            case ELLIPTIC_ENCRYPT ->
+            case ELLIPTIC_ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw); // TODO: replace after testing the refactored version of code.
         };
+        return out;
+    }
 
+    private static void outputResults(Mode modeSelected, byte[] out) {
         // results/output has been gathered, put said results where requested.
         if (fout != null) {
             System.out.println("writing data to " + fout);
@@ -152,7 +291,6 @@ class Main {
                 }
         }
     }
-
     /**
      * Encrypts a text input with a public key.
      *
@@ -185,6 +323,7 @@ class Main {
                 case 'd' -> modeSelected = Mode.DECRYPT;
                 case 'p' -> modeSelected = Mode.PUBLICKEY;
                 case 'q' -> modeSelected = Mode.PRIVATEKEY;
+                case 'i' -> modeSelected = Mode.ELLIPTIC_ENCRYPT;
                 default -> System.out.printf("Unknown flag: %s\n", args[0]);
             }
         }
@@ -580,7 +719,7 @@ class Main {
     enum Mode {
         HASH, TAG, ENCRYPT, DECRYPT
         ,PUBLICKEY, PRIVATEKEY
-//        , ELLIPTIC_ENCRYPT
+        , ELLIPTIC_ENCRYPT
 //        , ELLIPTIC_DECRYPT,
 //        SIGN, VERIFY
     }
