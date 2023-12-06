@@ -350,7 +350,8 @@ public class EllipticCurveTest {
                // don't have a method to compare equality of Goldilocks point itself
                 // compare the y coordinate.
 
-                if (Arrays.equals(publicKey.y.toByteArray(), z_y)) passes++;
+                if (Arrays.equals(publicKey.y.toByteArray(), z_y)
+                    && Arrays.equals(publicKey.x.toByteArray(), z_x)) passes++;
 
             } catch (IOException e) {
                 e.printStackTrace();

@@ -249,7 +249,12 @@ class Main {
                 if (fin != null) {
                     m = readFile(fin);
                 } else { m = prompt("Input file data: ").getBytes(); }
-                if (pub == null) {
+
+                // TODO: public key file is read wrong.
+                if (pub != null) { // if pub has a flag, then it needs a place to accept stuff
+                    // if (pub != null && p == null)
+                    pub = readFile(pub); // TODO: public key does not have a place to accept stuff
+                } else {
                     pub = prompt("public key: ").getBytes();
                 }
                 break;
@@ -271,8 +276,6 @@ class Main {
             }
         }
     }
-
-
 
 
     private static void outputResults(Mode modeSelected, byte[] out) {

@@ -1,3 +1,5 @@
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -73,6 +75,48 @@ public class EllipticCurve {
         var x_lsb = (g_x[g_x.length - 1] & 1) == 1;
         return new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(g_y));
     }
+
+    /**
+     * TODO: Can this accept a filepath of public key to directly convert
+     *      public key file into byte[]
+     * @return
+     */
+    public static GoldilocksPair publicKeyToGPoint(String filePath) throws IOException {
+        try {
+            FileInputStream fis = new FileInputStream(filePath);
+
+            long fileSize = fis.available();
+
+            byte[] fileToPublicKey = new byte[(int) fileSize];
+
+            // Read bytes from the file into byte array
+            fis.read(fileToPublicKey);
+
+            // input stream closes
+            fis.close();
+
+            // public key into stuff
+//                var z = EllipticCurve.byteStrDecode(fileToPublicKey);
+            var decoded = EllipticCurve.byteStrDecode(fileToPublicKey);
+            var z_x = decoded.get(0);
+            var z_y = decoded.get(1);
+
+            var x_lsb = (z_x[z_x.length - 1] & 1) == 1;
+            //GoldilocksPair Z = new GoldilocksPair(new BigInteger(z_x), new BigInteger(z_y));
+            EllipticCurve.GoldilocksPair Z = new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(z_y));
+
+            // don't have a method to compare equality of Goldilocks point itself
+            // compare the y coordinate.
+            return Z;
+//            if (Arrays.equals(publicKey.y.toByteArray(), z_y)
+//                    && Arrays.equals(publicKey.x.toByteArray(), z_x)) passes++;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
     /**
      * Currently uses 448 as number of bits in this function.
      *
