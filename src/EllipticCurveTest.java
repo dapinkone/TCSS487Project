@@ -1,6 +1,11 @@
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -286,5 +291,71 @@ public class EllipticCurveTest {
         }
         System.out.println(passes/sample_size*100);
         assert passes==sample_size;
+    }
+
+    @Test
+    public void test_retrieve_publicKey() throws IOException {
+        var passes = 0;
+        for(int i=0; i < sample_size; i++) {
+            // tests for a longer, random password.
+            var pw = new BigInteger(448, EllipticCurve.RAND).toByteArray();
+            // need to gen a public / private key pair.
+            EllipticCurve.GoldilocksPair publicKey = EllipticCurve.generateKeyPair(pw).publicKey();
+
+            byte[] publicKeyToStore = KMACXOF256.appendBytes(KMACXOF256.encode_string(publicKey.x),
+                                                            KMACXOF256.encode_string(publicKey.y));
+
+            String filePath = "test/retrieve_publicKey.txt";
+
+            // write binary into a file
+            try {
+                FileOutputStream writer = new FileOutputStream(filePath);
+
+                writer.write(publicKeyToStore);
+
+                // close the fileoutputstream
+                writer.close();
+
+                System.out.println("Bytes have been successfully added in a file");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            // retrieve public key from a file
+
+            try {
+                FileInputStream fis = new FileInputStream(filePath);
+
+                long fileSize = fis.available();
+
+
+                byte[] fileToPublicKey = new byte[(int) fileSize];
+
+                // Read bytes from the file into byte array
+                fis.read(fileToPublicKey);
+
+                // input stream closes
+                fis.close();
+
+                // public key into stuff
+//                var z = EllipticCurve.byteStrDecode(fileToPublicKey);
+                var decoded = EllipticCurve.byteStrDecode(fileToPublicKey);
+                var z_x = decoded.get(0);
+                var z_y = decoded.get(1);
+
+                var x_lsb = (z_x[z_x.length - 1] & 1) == 1;
+                //GoldilocksPair Z = new GoldilocksPair(new BigInteger(z_x), new BigInteger(z_y));
+                EllipticCurve.GoldilocksPair Z = new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(z_y));
+
+
+               // don't have a method to compare equality of Goldilocks point itself
+                // compare the y coordinate.
+
+                if (Arrays.equals(publicKey.y.toByteArray(), z_y)) passes++;
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        assert passes == sample_size;
     }
 }

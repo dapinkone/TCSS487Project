@@ -197,7 +197,7 @@ class Main {
             // private key <- password
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
 
-            case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, publicKeyToPoint(pub));
+            case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, EllipticCurve.publicKeyToPoint(pub));
             case ELLIPTIC_DECRYPT -> EllipticCurve.decrypt(m, pw);
             default -> throw new IllegalArgumentException("Unsupported encryption mode: " + modeSelected);
         };
@@ -256,30 +256,23 @@ class Main {
             }
             case ELLIPTIC_DECRYPT : {
                 // Decryption requires file & password
+                // read password
+                if (fpw != null && pw == null) // password file provided
+                    pw = readFile(fpw);
+                else if (pw == null) {
+                    pw = prompt("password: ").getBytes();
+                }
+                // reads file
+                if (fin != null) {
+                    m = readFile(fin);
+                } else { m = prompt("Input file data: ").getBytes(); }
 
+                break;
             }
-
         }
     }
 
-    /**
-     * Pre: currently takes left_encoded (G_Pair(y))
-     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
-     *
-     *
-     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
-     *                  if publicKey = left_encoded(y) || left_encoded(x)
-     * @return Goldilock pair retrieved from a public key file.
-     */
-    private static EllipticCurve.GoldilocksPair publicKeyToPoint(byte[] publicKey) {
-        // TODO: Does using
-        var decoded = EllipticCurve.byteStrDecode(publicKey);
 
-        byte[] G_x = decoded.get(0);
-        byte[] G_y = decoded.get(1);
-
-        return new EllipticCurve.GoldilocksPair(new BigInteger(G_x), new BigInteger(G_y));
-    }
 
 
     private static void outputResults(Mode modeSelected, byte[] out) {
@@ -336,31 +329,7 @@ class Main {
         }
         return sb.toString();
     }
-//    private static void hashFile() {
-//        System.out.print("Enter the file path to hash: ");
-//        String filePath = scanner.nextLine();
-//        try {
-//            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-//            byte[] hash = kmacxof256.cSHAKE(DEFAULT_MODE, fileData, NUMBER_OF_BYTES, new byte[0], new byte[0]);
-//            System.out.println("Hash: " + bytesToHex(hash));
-//        } catch (IOException e) {
-//            System.out.println("Error reading file: " + e.getMessage());
-//        }
-//    }
 
-    //    private static void macOfFile() {
-//        System.out.print("Enter the file path for MAC computation: ");
-//        String filePath = scanner.nextLine();
-//        System.out.print("Enter the passphrase: ");
-//        String passphrase = scanner.nextLine();
-//        try {
-//            byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-//            byte[] mac = kmacxof256.cSHAKE(256, fileData, 512, passphrase.getBytes(), "MAC".getBytes());
-//            System.out.println("MAC: " + bytesToHex(mac));
-//        } catch (IOException e) {
-//            System.out.println("Error reading file: " + e.getMessage());
-//        }
-//    }
     private static void writeFile(String fout, byte[] data) {
         try {
             Path filePath = Paths.get(fout);
@@ -370,27 +339,6 @@ class Main {
         }
     }
 
-    //    private static void decryptFile() {
-//        System.out.print("Enter the encrypted file path to decrypt: ");
-//        String filePath = scanner.nextLine();
-//        System.out.print("Enter the passphrase: ");
-//        String passphrase = scanner.nextLine();
-//        try {
-//            byte[] encryptedData = Files.readAllBytes(Paths.get(filePath));
-//            // Assuming the encrypted file structure is: z || c || t
-////            byte[] z = Arrays.copyOfRange(encryptedData, 0, 64); // first 512 bits
-////            byte[] c = Arrays.copyOfRange(encryptedData, 64, encryptedData.length - 64); // middle portion
-////            byte[] t = Arrays.copyOfRange(encryptedData, encryptedData.length - 64, encryptedData.length); // last 512 bits
-//            byte[] decryptedData = KMACXOF256.symmetricDecrypt(encryptedData, passphrase.getBytes());
-//            Path decryptedFilePath = Paths.get(filePath + ".decrypted");
-//            Files.write(decryptedFilePath, decryptedData);
-//            System.out.println("Decrypted file created: " + decryptedFilePath);
-//        } catch (IOException e) {
-//            System.out.println("Error decrypting file: " + e.getMessage());
-//        } catch (IllegalArgumentException e) {
-//            System.out.println("Decryption failed: " + e.getMessage());
-//        }
-//    }
     static int test_hexdigit(char ch) {
         if (ch >= '0' && ch <= '9')
             return ch - '0';
@@ -400,14 +348,6 @@ class Main {
             return ch - 'a' + 10;
         return -1;
     }
-//    private static byte[] encrypt(byte[] fileData /* m */, byte[] passphrase) {
-////        System.out.print("Enter the file path to encrypt: ");
-////        String filePath = scanner.nextLine();
-////        System.out.print("Enter the passphrase: ");
-////        String passphrase = scanner.nextLine();
-//            //byte[] fileData = Files.readAllBytes(Paths.get(filePath));
-//            return KMACXOF256.symmetricEncrypt(fileData, passphrase);
-//    }
 
     static int test_readhex(byte[] buf, String str, int maxbytes) {
         int i, h, l;

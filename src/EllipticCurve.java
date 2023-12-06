@@ -55,6 +55,25 @@ public class EllipticCurve {
     }
 
     /**
+     * Pre: currently takes left_encoded (G_Pair(y))
+     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
+     *
+     *
+     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
+     *                  if publicKey = left_encoded(y) || left_encoded(x)
+     * @return Goldilock pair retrieved from a public key file.
+     */
+    public static GoldilocksPair publicKeyToPoint(byte[] publicKey) {
+        // TODO: How does this cause an error?
+        var decoded = EllipticCurve.byteStrDecode(publicKey);
+
+        byte[] g_x = decoded.get(0);
+        byte[] g_y = decoded.get(1);
+
+        var x_lsb = (g_x[g_x.length - 1] & 1) == 1;
+        return new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(g_y));
+    }
+    /**
      * Currently uses 448 as number of bits in this function.
      *
      * @return
@@ -75,7 +94,8 @@ public class EllipticCurve {
 
     /**
      * unmarshals an arbitrary number of encode_string's from a given byte[]
-     * @param b byte string, presumably with encoded strings
+     *
+     * @param b byte string, presumably with encoded strings must match the format of bytesToInt().
      * @return arraylist of separated byte strings
      */
     public static ArrayList<byte[]> byteStrDecode(byte[] b) {
@@ -143,7 +163,7 @@ public class EllipticCurve {
     /**
      * Decrypt the zct[] message under a passphrase pw
      *
-     * @param zct given cryptogram
+     * @param zct given cryptogram TODO: What is the required format of the zct[]?
      * @param pw  passphrase
      * @return
      */
