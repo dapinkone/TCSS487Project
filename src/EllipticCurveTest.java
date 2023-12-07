@@ -246,11 +246,13 @@ public class EllipticCurveTest {
             assert Arrays.equals(result, m);
         }
     }
+
+    //TODO: Fixing return type of generate_sig from byte[][] into byte[]
     @Test
     public void test_verify_signiture() {
         var m = "Lorem Ipsem 12345678910".getBytes();
         var pw = "test password".getBytes();
-        var sig = EllipticCurve.generateSignature(m, pw);
+        byte[] sig = EllipticCurve.generateSignature(m, pw);
 
         // verifySignature() requires fpub key V. generate from pw?
         var V = EllipticCurve.generateKeyPair(pw).publicKey();
@@ -345,10 +347,6 @@ public class EllipticCurveTest {
                 var x_lsb = (z_x[z_x.length - 1] & 1) == 1;
                 //GoldilocksPair Z = new GoldilocksPair(new BigInteger(z_x), new BigInteger(z_y));
                 EllipticCurve.GoldilocksPair Z = new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(z_y));
-
-
-               // don't have a method to compare equality of Goldilocks point itself
-                // compare the y coordinate.
 
                 if (Arrays.equals(publicKey.y.toByteArray(), z_y)
                     && Arrays.equals(publicKey.x.toByteArray(), z_x)) passes++;

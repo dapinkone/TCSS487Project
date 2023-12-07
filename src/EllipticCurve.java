@@ -79,8 +79,7 @@ public class EllipticCurve {
     }
 
     /**
-     * TODO: Can this accept a filepath of public key to directly convert
-     *      public key file into byte[]
+     *
      * @return
      */
     public static GoldilocksPair publicKeyToGPoint(String fileName) throws IOException {
@@ -95,39 +94,29 @@ public class EllipticCurve {
         try (FileInputStream fis = new FileInputStream(file)){
             System.out.println("Public Key file path: " + file.getAbsolutePath());
 
-
             long fileSize = fis.available();
 
             byte[] fileToPublicKey = new byte[(int) file.length()];
-
             // Read bytes from the file into byte array
             fis.read(fileToPublicKey);
-
             // input stream closes
             fis.close();
 
-            // public key into stuff
-//                var z = EllipticCurve.byteStrDecode(fileToPublicKey);
             var decoded = EllipticCurve.byteStrDecode(fileToPublicKey);
             var z_x = decoded.get(0);
             var z_y = decoded.get(1);
 
             var x_lsb = (z_x[z_x.length - 1] & 1) == 1;
-            //GoldilocksPair Z = new GoldilocksPair(new BigInteger(z_x), new BigInteger(z_y));
             EllipticCurve.GoldilocksPair Z = new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(z_y));
 
-            // don't have a method to compare equality of Goldilocks point itself
-            // compare the y coordinate.
             return Z;
-//            if (Arrays.equals(publicKey.y.toByteArray(), z_y)
-//                    && Arrays.equals(publicKey.x.toByteArray(), z_x)) passes++;
-
         } catch (IOException e) {
             e.printStackTrace();
             throw e;
         }
     }
 
+    // public static file to signature
     /**
      * Currently uses 448 as number of bits in this function.
      *
@@ -170,6 +159,7 @@ public class EllipticCurve {
         }
         return lst;
     }
+
     /**
      * Encrypts a byte array m, under the (Schnorr/DHIES) public key
      *
@@ -288,34 +278,69 @@ public class EllipticCurve {
     }
 
     /**
+     * TODO: Can this accept a filepath of public key to directly convert
+     *      public key file into byte[]
+     * @return
+     */
+    public static byte[] fileToSignature(String fileName) throws IOException {
+        File file = new File(fileName);
+        if (!file.isAbsolute()) {
+            file = new File(System.getProperty("user.dir"), fileName);
+        }
+
+        if (!file.exists()) {
+            throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
+        }
+        try (FileInputStream fis = new FileInputStream(file)){
+            System.out.println("Signature file path: " + file.getAbsolutePath());
+
+            long fileSize = fis.available();
+
+            byte[] signature = new byte[(int) file.length()];
+            // Read bytes from the file into byte array
+            fis.read(signature);
+            // input stream closes
+            fis.close();
+
+            return signature;
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    //TODO: fixing return type of g
+    /**
      * Generates a signature for a byte array m under passphrase pw
      *
      * @param m  given message/plaintext
      * @param pw given passphrase
-     * @return KeyPair
+     * @return KeyPair in left_encoded form.
      */
-    public static byte[][] generateSignature(byte[] m, byte[] pw) {
+    public static byte[] generateSignature(byte[] m, byte[] pw) {
         //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
         var L = 448;
         var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), L, "SK".getBytes()))
                 .shiftLeft(2).mod(R); // private key
 
         //▪ k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
-        var k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, L, "N".getBytes()))
+        BigInteger k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, L, "N".getBytes()))
                 .shiftLeft(2).mod(R);
 
         //▪ U <- k*G;
         var U = G.exp(k);
 
         //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
-        var h = new BigInteger(
+        byte[] h = new BigInteger(
                 KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes()))
                 .mod(R)
                 .toByteArray();
-        var z = (k.subtract((new BigInteger(h)).multiply(s))).mod(R).toByteArray();
+        byte[] z = (k.subtract((new BigInteger(h)).multiply(s))).mod(R).toByteArray();
+
+        // left_encoded(h, z)
 
         //▪ signature: (h, z)
-        return new byte[][]{h, z};
+        return KMACXOF256.appendBytes(KMACXOF256.encode_string(h), KMACXOF256.encode_string(z));
     }
 
     /**
@@ -326,10 +351,13 @@ public class EllipticCurve {
      * @param m  message/plaintext
      * @return boolean
      */
-    public static boolean verifySignature(byte[][] hz, GoldilocksPair V, byte[] m) {
+    public static boolean verifySignature(byte[] hz, GoldilocksPair V, byte[] m) {
         // TODO: should be able to pass in and destructure signature (h, z) as byte[]
-        var h = hz[0];
-        var z = hz[1];
+        var decoded = byteStrDecode(hz);
+        var h = decoded.get(0);
+        var z = decoded.get(1);
+//        var h = hz[0];
+//        var z = hz[1];
         // U <- z*G + h*V
         var U = G.exp(new BigInteger(z)).add(V.exp(new BigInteger(h)));
         var L = 448;

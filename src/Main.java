@@ -21,12 +21,11 @@ class Main {
      * public key is only accepted as a file.
      * private key is only stored in a file.
      */
-    private static String fin = null, fout = null, fpw = null, fpub = null;
+    private static String fin = null, fout = null, fpw = null, fpub = null, fsig = null;
 
     // TODO: fpub may not be used due to its bugginess = public key,
     //  s = signature
-    private static byte[] pw = null, m = null, pub = null, s = null;
-
+    private static byte[] pw = null, m = null, pub = null;
     public static void main(String[] args) throws IOException {
         //run_tests();
 
@@ -61,6 +60,7 @@ class Main {
                 case 'i' -> modeSelected = Mode.ELLIPTIC_ENCRYPT;
                 case 'k' -> modeSelected = Mode.ELLIPTIC_DECRYPT;
                 case 's' -> modeSelected = Mode.SIGN;
+                case 'v' -> modeSelected = Mode.VERIFY;
                 default -> System.out.printf("Unknown flag: %s\n", args[0]);
             }
         }
@@ -74,8 +74,8 @@ class Main {
                 case "-fout" -> fout = args[ptr + 1]; // output to file.
                 case "-fpw" -> fpw = args[ptr + 1]; // password as file.
                 case "-fpub" -> fpub = args[ptr + 1]; // public key as file.
-                case "-pw" ->
-                        pw = args[ptr + 1].getBytes(); // password as text.
+                case "-pw" -> pw = args[ptr + 1].getBytes(); // password as text.
+                case "-fsig" -> fsig = args[ptr + 1]; // signature as a file.
             }
         }
     }
@@ -97,6 +97,8 @@ class Main {
             System.out.println("10. Encrypt a data file in asymmetric way");
             System.out.println("11. Decrypt an asymmetric cyrptogram");
             System.out.println("12. Generate a public key of a text");
+            System.out.println("13. Generate a signature file");
+            System.out.println("14. Verify a signature");
             System.out.print("Enter your choice: ");
 
             int choice = scanner.nextInt();
@@ -157,6 +159,17 @@ class Main {
                     modeSelected = Mode.PUBLICKEY;
                     // Enter public key via STDIN
                 }
+                case 13 -> {
+                    modeSelected = Mode.SIGN;
+                    fin = prompt(INPUT_PROMPT);
+                    pw = prompt("password").getBytes();
+                }
+                case 14 -> {
+                    modeSelected = Mode.VERIFY;
+                    fin = prompt(INPUT_PROMPT);
+                    fsig = prompt("signature file");
+                    fpub = prompt("public key input: ");
+                }
                 default ->
                         System.out.println("Invalid option. Please try again");
             }
@@ -210,6 +223,13 @@ class Main {
 
             case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, EllipticCurve.publicKeyToGPoint(fpub));
             case ELLIPTIC_DECRYPT -> EllipticCurve.decrypt(m, pw);
+            case SIGN -> EllipticCurve.generateSignature(m, pw);
+            case VERIFY -> {
+                boolean isVerified = (EllipticCurve.verifySignature(EllipticCurve.fileToSignature(fsig),
+                                        EllipticCurve.publicKeyToGPoint(fpub), m));
+                String result = isVerified ? "Signature is verified" : "Signature has been tampered";
+                yield result.getBytes();
+            }
             default -> throw new IllegalArgumentException("Unsupported encryption mode: " + modeSelected);
         };
         return out;
@@ -247,8 +267,6 @@ class Main {
      */
     private static void handleAsymmetricPreconditions(Mode mode) throws IOException {
 
-        // public key received pw
-        // if fpub file is provided
         switch (mode) {
 
             case PUBLICKEY : // public and private key require a password
@@ -265,13 +283,11 @@ class Main {
                 if (fin != null) { m = readFile(fin);
                 } else { m = prompt("Input file data: ").getBytes(); }
 
-                // TODO: fpub will accept a string reference of the file location.
-
-                // if fpub has a flag, then it needs a place to accept stuff
-//                if (fpub != null && pub == null) { pub = readFile(fpub);
-//                } else { pub = prompt("public key file: ").getBytes(); }
+                // public key is directly read in the above function.
                 break;
             }
+
+            case SIGN:
             case ELLIPTIC_DECRYPT : {
                 // Decryption requires file & password
                 // read password
@@ -287,6 +303,18 @@ class Main {
 
                 break;
             }
+            case VERIFY: {
+                // read signature
+//                if (fsig != null && sig == null) sig = readFile(fsig);
+//                else if (sig == null) {
+//                    sig = prompt
+//                }
+                //read file
+                if (fin != null) { m = readFile(fin);
+                } else { m = prompt(INPUT_PROMPT).getBytes(); }
+
+                // reads public file in side the other case.
+            }
         }
     }
 
@@ -300,28 +328,15 @@ class Main {
         } else {
             if (modeSelected != Mode.DECRYPT && modeSelected != Mode.ELLIPTIC_DECRYPT)
                 Sha3.phex(out); // not printable if it's binary data.
+            else if (modeSelected == Mode.VERIFY) {
+                System.out.println(new String(out));
+            }
             else
                 for (byte b : out) {
                     System.out.print((char) b);
                 }
         }
     }
-
-    /**
-     * Encrypts a text input with a public key.
-     *
-     * @param m
-     * @param y
-     * @return
-     */
-    private static byte[] ellipticEncryptionHandler(byte[] m, byte[] y) {
-        int y_len = y[0] & 0xFF; // bit mask to avoid extending signs
-        byte[] v_y = Arrays.copyOfRange(y, 1, y.length);
-        EllipticCurve.GoldilocksPair v = new EllipticCurve.GoldilocksPair(false, new BigInteger(v_y));
-
-        return EllipticCurve.encrypt(m, v);
-    }
-
 
     private static String prompt(String s) {
         System.out.print(s);
@@ -660,8 +675,8 @@ class Main {
         HASH, TAG, ENCRYPT, DECRYPT
         ,PUBLICKEY, PRIVATEKEY
         , ELLIPTIC_ENCRYPT
-        , ELLIPTIC_DECRYPT, SIGN
-//        VERIFY
+        , ELLIPTIC_DECRYPT, SIGN,
+        VERIFY
     }
 
 }
