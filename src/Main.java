@@ -23,7 +23,8 @@ class Main {
      */
     private static String fin = null, fout = null, fpw = null, fpub = null;
 
-    // TODO: p = public key, s = signature
+    // TODO: fpub may not be used due to its bugginess = public key,
+    //  s = signature
     private static byte[] pw = null, m = null, pub = null, s = null;
 
     public static void main(String[] args) throws IOException {
@@ -264,9 +265,11 @@ class Main {
                 if (fin != null) { m = readFile(fin);
                 } else { m = prompt("Input file data: ").getBytes(); }
 
+                // TODO: fpub will accept a string reference of the file location.
+
                 // if fpub has a flag, then it needs a place to accept stuff
-                if (fpub != null && pub == null) { pub = readFile(fpub);
-                } else { pub = prompt("public key file: ").getBytes(); }
+//                if (fpub != null && pub == null) { pub = readFile(fpub);
+//                } else { pub = prompt("public key file: ").getBytes(); }
                 break;
             }
             case ELLIPTIC_DECRYPT : {
