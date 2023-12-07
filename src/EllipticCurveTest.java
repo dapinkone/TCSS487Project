@@ -252,7 +252,7 @@ public class EllipticCurveTest {
         var pw = "test password".getBytes();
         var sig = EllipticCurve.generateSignature(m, pw);
 
-        // verifySignature() requires pub key V. generate from pw?
+        // verifySignature() requires fpub key V. generate from pw?
         var V = EllipticCurve.generateKeyPair(pw).publicKey();
 
         assert EllipticCurve.verifySignature(sig, V, m);
@@ -267,7 +267,7 @@ public class EllipticCurveTest {
             EllipticCurve.RAND.nextBytes(pw);
             var sig = EllipticCurve.generateSignature(m, pw);
 
-            // verifySignature() requires pub key V. generate from pw?
+            // verifySignature() requires fpub key V. generate from pw?
             var V = EllipticCurve.generateKeyPair(pw).publicKey();
 
             assert (EllipticCurve.verifySignature(sig, V, m));

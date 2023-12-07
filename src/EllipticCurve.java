@@ -1,4 +1,6 @@
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
@@ -81,13 +83,22 @@ public class EllipticCurve {
      *      public key file into byte[]
      * @return
      */
-    public static GoldilocksPair publicKeyToGPoint(String filePath) throws IOException {
-        try {
-            FileInputStream fis = new FileInputStream(filePath);
+    public static GoldilocksPair publicKeyToGPoint(String fileName) throws IOException {
+        File file = new File(fileName);
+        if (!file.isAbsolute()) {
+            file = new File(System.getProperty("user.dir"), fileName);
+        }
+
+        if (!file.exists()) {
+            throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
+        }
+        try (FileInputStream fis = new FileInputStream(file)){
+            System.out.println("Public Key file path: " + file.getAbsolutePath());
+
 
             long fileSize = fis.available();
 
-            byte[] fileToPublicKey = new byte[(int) fileSize];
+            byte[] fileToPublicKey = new byte[(int) file.length()];
 
             // Read bytes from the file into byte array
             fis.read(fileToPublicKey);

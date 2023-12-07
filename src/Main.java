@@ -21,9 +21,10 @@ class Main {
      * public key is only accepted as a file.
      * private key is only stored in a file.
      */
-    private static String fin = null, fout = null, fpw = null;
-    // TODO: is public key accepted via a text?
-    private static byte[] pw = null, m = null, pub = null;
+    private static String fin = null, fout = null, fpw = null, fpub = null;
+
+    // TODO: p = public key, s = signature
+    private static byte[] pw = null, m = null, pub = null, s = null;
 
     public static void main(String[] args) throws IOException {
         //run_tests();
@@ -71,7 +72,7 @@ class Main {
                 case "-fin" -> fin = args[ptr + 1];   // input from file.
                 case "-fout" -> fout = args[ptr + 1]; // output to file.
                 case "-fpw" -> fpw = args[ptr + 1]; // password as file.
-                case "-pub" -> pub = args[ptr + 1].getBytes(); // public key as file.
+                case "-fpub" -> fpub = args[ptr + 1]; // public key as file.
                 case "-pw" ->
                         pw = args[ptr + 1].getBytes(); // password as text.
             }
@@ -144,7 +145,7 @@ class Main {
                 case 10 -> {
                     modeSelected = Mode.ELLIPTIC_ENCRYPT;
                     fin = prompt(INPUT_PROMPT);
-                    pub = prompt("public key input:").getBytes(); // collect public key file
+                    fpub = prompt("public key input: "); // collect public key file
                 }
                 case 11 -> {
                     modeSelected = Mode.ELLIPTIC_DECRYPT;
@@ -161,6 +162,15 @@ class Main {
         }
     }
 
+    /**
+     * Following flags from above should not be used:
+     * fin , fout , fpw , fpub
+     * Only pw (password), m (message), p (public key), s (signature) should be used.
+     *
+     * @param modeSelected
+     * @return
+     * @throws IOException
+     */
     private static byte[] performOperationBasedOnMode(Mode modeSelected) throws IOException {
         if (isSymmetricOperation(modeSelected)) {
             handleSymmetricPreconditions(modeSelected);
@@ -197,7 +207,7 @@ class Main {
             // private key <- password
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
 
-            case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, EllipticCurve.publicKeyToPoint(pub));
+            case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, EllipticCurve.publicKeyToGPoint(fpub));
             case ELLIPTIC_DECRYPT -> EllipticCurve.decrypt(m, pw);
             default -> throw new IllegalArgumentException("Unsupported encryption mode: " + modeSelected);
         };
@@ -228,11 +238,16 @@ class Main {
     /**
      * Asymmetric encryption performs elliptic_encrypt, elliptic_decrypt,
      * verify signature, sign a file, write private key
+     *
+     * Values from these flags are assigned to byte[]
+     * fin
+     * fpw -> pw
+     * fpub -> pub
      */
     private static void handleAsymmetricPreconditions(Mode mode) throws IOException {
 
         // public key received pw
-        // if pub file is provided
+        // if fpub file is provided
         switch (mode) {
 
             case PUBLICKEY : // public and private key require a password
@@ -246,17 +261,13 @@ class Main {
             }
             case ELLIPTIC_ENCRYPT: {
                 // requires data, public key (file only)
-                if (fin != null) {
-                    m = readFile(fin);
+                if (fin != null) { m = readFile(fin);
                 } else { m = prompt("Input file data: ").getBytes(); }
 
                 // TODO: public key file is read wrong.
-                if (pub != null) { // if pub has a flag, then it needs a place to accept stuff
-                    // if (pub != null && p == null)
-                    pub = readFile(pub); // TODO: public key does not have a place to accept stuff
-                } else {
-                    pub = prompt("public key: ").getBytes();
-                }
+                // if fpub has a flag, then it needs a place to accept stuff
+                if (fpub != null && pub == null) { pub = readFile(fpub); // TODO: public key does not have a place to accept stuff
+                } else { pub = prompt("public key file: ").getBytes(); }
                 break;
             }
             case ELLIPTIC_DECRYPT : {
