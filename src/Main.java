@@ -264,9 +264,8 @@ class Main {
                 if (fin != null) { m = readFile(fin);
                 } else { m = prompt("Input file data: ").getBytes(); }
 
-                // TODO: public key file is read wrong.
                 // if fpub has a flag, then it needs a place to accept stuff
-                if (fpub != null && pub == null) { pub = readFile(fpub); // TODO: public key does not have a place to accept stuff
+                if (fpub != null && pub == null) { pub = readFile(fpub);
                 } else { pub = prompt("public key file: ").getBytes(); }
                 break;
             }
