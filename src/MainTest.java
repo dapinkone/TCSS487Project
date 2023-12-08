@@ -183,33 +183,6 @@ public class MainTest {
         assert Arrays.equals(A, B);
     }
 
-//    public static byte[] fileToSignature(String fileName) throws IOException {
-//        File file = new File(fileName);
-//        if (!file.isAbsolute()) {
-//            file = new File(System.getProperty("user.dir"), fileName);
-//        }
-//
-//        if (!file.exists()) {
-//            throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
-//        }
-//        try (FileInputStream fis = new FileInputStream(file)){
-//            System.out.println("Signature file path: " + file.getAbsolutePath());
-//
-//            long fileSize = fis.available();
-//
-//            byte[] signature = new byte[(int) file.length()];
-//            // Read bytes from the file into byte array
-//            fis.read(signature);
-//            // input stream closes
-//            fis.close();
-//
-//            return signature;
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            throw e;
-//        }
-//    }
-
     @Test
     public void main_test_elliptic_enc_user_text_to_file() {
         // BONUS: Encrypt text input by the user directly to the app instead of
@@ -225,9 +198,15 @@ public class MainTest {
     }
 
     @Test
-    public void main_test_sign_file_sig_to_file() {
+    public void main_test_sign_file_sig_to_file() throws IOException {
         // Sign a given file from a given password and
         // write the signature to a file.
+        String pw = "It's a wonderful day";
+        String out = "test/testing_signature.bin";
+        Main.main(new String[] { // gen pub key
+                "-s", "-pw", pw, "-fout", out
+        });
+        var B = Main.readFile("test/testing_signature.bin");
 
     }
 
