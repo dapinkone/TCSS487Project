@@ -201,13 +201,15 @@ public class MainTest {
     public void main_test_sign_file_sig_to_file() throws IOException {
         // Sign a given file from a given password and
         // write the signature to a file.
-        String pw = "It's a wonderful day";
+        String pw = "You You";
+        String m = "README.md";
         String out = "test/testing_signature.bin";
-        Main.main(new String[] { // gen pub key
-                "-s", "-pw", pw, "-fout", out
+        Main.main(new String[] { // gen signature
+                "-s", "-fin", m, "-pw", pw, "-fout", out
         });
-        var B = Main.readFile("test/testing_signature.bin");
-
+        byte[] A = EllipticCurve.generateSignature(m.getBytes(), pw.getBytes());
+        byte[] B = Main.readFile("test/testing_signature.bin");
+        assert Arrays.equals(A, B);
     }
 
     @Test
