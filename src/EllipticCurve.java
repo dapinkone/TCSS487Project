@@ -58,29 +58,33 @@ public class EllipticCurve {
         return new KeyPair(privateKey, publicKey);
     }
 
+//    /**
+//     * Pre: currently takes left_encoded (G_Pair(y))
+//     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
+//     *
+//     *
+//     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
+//     *                  if publicKey = left_encoded(y) || left_encoded(x)
+//     * @return Goldilock pair retrieved from a public key file.
+//     */
+//    public static GoldilocksPair publicKeyToPoint(byte[] publicKey) {
+//        // TODO: How does this cause an error?
+//        var decoded = EllipticCurve.byteStrDecode(publicKey);
+//
+//        byte[] g_x = decoded.get(0);
+//        byte[] g_y = decoded.get(1);
+//
+//        var x_lsb = (g_x[g_x.length - 1] & 1) == 1;
+//        return new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(g_y));
+//    }
+
     /**
-     * Pre: currently takes left_encoded (G_Pair(y))
-     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
+     * Retrieves a public key from a public key encoded as
+     * appended(left_encoded(G.x), left_encoded(G.y))
      *
-     *
-     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
-     *                  if publicKey = left_encoded(y) || left_encoded(x)
-     * @return Goldilock pair retrieved from a public key file.
-     */
-    public static GoldilocksPair publicKeyToPoint(byte[] publicKey) {
-        // TODO: How does this cause an error?
-        var decoded = EllipticCurve.byteStrDecode(publicKey);
-
-        byte[] g_x = decoded.get(0);
-        byte[] g_y = decoded.get(1);
-
-        var x_lsb = (g_x[g_x.length - 1] & 1) == 1;
-        return new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(g_y));
-    }
-
-    /**
-     *
-     * @return
+     * @param fileName contains public key in appended(left_encoded(G.x), left_encoded(G.y))
+     * @return Point to be used in Edwards Curve.
+     * @throws IOException
      */
     public static GoldilocksPair publicKeyToGPoint(String fileName) throws IOException {
         File file = new File(fileName);
@@ -116,18 +120,6 @@ public class EllipticCurve {
         }
     }
 
-    // public static file to signature
-    /**
-     * Currently uses 448 as number of bits in this function.
-     *
-     * @return
-     */
-    private static byte[] randomBytes() {
-        SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[448 / 8];
-        random.nextBytes(bytes);
-        return bytes;
-    }
     public static int bytesToInt(byte[] bytes) {
         int value = 0;
         for(byte b : bytes) {
@@ -203,43 +195,21 @@ public class EllipticCurve {
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
         return KMACXOF256.appendBytes(KMACXOF256.encode_string(Z.x),
                 KMACXOF256.encode_string(Z.y), leftEncodedC, leftEncodedT);
-        // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
     /**
      * Decrypt the zct[] message under a passphrase pw
      *
-     * @param zct given cryptogram TODO: What is the required format of the zct[]?
+     * @param zct given cryptogram
      * @param pw  passphrase
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        // TODO: possible rewrite using a left_decode() function?
         // unpack different left encoded values from (Z, c, t)
         var decoded = byteStrDecode(zct);
         var z_x = decoded.get(0);
         var z_y = decoded.get(1);
         var c = decoded.get(2);
         var t = decoded.get(3);
-//        int ptr = 0; // points to the start of the current left_encode we're unpacking.
-//        int len; // the length of the current left_encode
-//        // unpack Z_x
-//        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
-//        byte[] z_x = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
-//        ptr += 1 + len;
-//
-//        // unpack Z_y
-//        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
-//        byte[] z_y = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
-//        ptr += 1 + len;
-//
-//        // unpack c
-//        len = zct[ptr] & 0xFF;
-//        byte[] c = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len); // TODO: not using c?
-//        ptr += 1 + len;
-//
-//        // unpack t
-//        len = zct[ptr] & 0xFF;
-//        byte[] t = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
 
         // unpacking complete, collect (Z_x, Z_y) into data structure for use:
         // TODO: (re?)store x_lsb ? rather than z_x to save space
@@ -257,7 +227,8 @@ public class EllipticCurve {
         GoldilocksPair W = Z.exp(bigS);
 
         // 4. (ka || ke) <- KMACXOF256(W_x, "", 2 x 448, "PK")
-        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2 * 448, "PK".getBytes());
+        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(),
+                "".getBytes(), 2 * 448, "PK".getBytes());
         // 4. (ka || ke) <- KMACXOF256(Wx, “”, 2×448, “PK”)
         byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
@@ -278,9 +249,11 @@ public class EllipticCurve {
     }
 
     /**
-     * TODO: Can this accept a filepath of public key to directly convert
-     *      public key file into byte[]
-     * @return
+     * Retrieves signature stored in a file.
+     *
+     * @param fileName File containing a signature
+     * @return appended(left_encoded( ), left_encoded(GPoint))
+     * @throws IOException If file name is not found.
      */
     public static byte[] fileToSignature(String fileName) throws IOException {
         File file = new File(fileName);
@@ -309,7 +282,6 @@ public class EllipticCurve {
         }
     }
 
-    //TODO: fixing return type of g
     /**
      * Generates a signature for a byte array m under passphrase pw
      *
@@ -318,19 +290,19 @@ public class EllipticCurve {
      * @return KeyPair in left_encoded form.
      */
     public static byte[] generateSignature(byte[] m, byte[] pw) {
-        //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
-        var L = 448;
+        // s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
+        int L = 448;
         var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), L, "SK".getBytes()))
                 .shiftLeft(2).mod(R); // private key
 
-        //▪ k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
+        // k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
         BigInteger k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, L, "N".getBytes()))
                 .shiftLeft(2).mod(R);
 
-        //▪ U <- k*G;
+        // U <- k*G;
         var U = G.exp(k);
 
-        //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
+        // h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
         byte[] h = new BigInteger(
                 KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes()))
                 .mod(R)
@@ -339,7 +311,7 @@ public class EllipticCurve {
 
         // left_encoded(h, z)
 
-        //▪ signature: (h, z)
+        // signature: (h, z)
         return KMACXOF256.appendBytes(KMACXOF256.encode_string(h), KMACXOF256.encode_string(z));
     }
 
@@ -349,10 +321,11 @@ public class EllipticCurve {
      *
      * @param hz signature (h, z)
      * @param m  message/plaintext
+     * @param
      * @return boolean
      */
     public static boolean verifySignature(byte[] hz, GoldilocksPair V, byte[] m) {
-        // TODO: should be able to pass in and destructure signature (h, z) as byte[]
+        // should be able to pass in and destructure signature (h, z) as byte[]
         var decoded = byteStrDecode(hz);
         var h = decoded.get(0);
         var z = decoded.get(1);

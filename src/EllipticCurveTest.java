@@ -22,11 +22,8 @@ public class EllipticCurveTest {
     static final EllipticCurve.GoldilocksPair G = EllipticCurve.G;
     private final EllipticCurve.GoldilocksPair publicGenerator = EllipticCurve.G;
 
-    // what tests to create
-    // Neutral element: O := (0, 1)
     private final EllipticCurve.GoldilocksPair neutralElement = new EllipticCurve.GoldilocksPair(BigInteger.ZERO, BigInteger.ONE);
 
-    // TODO:
     @Test
     public void testGoldilocksConstructor() {
         EllipticCurve.GoldilocksPair pair = new EllipticCurve.GoldilocksPair(BigInteger.ONE, BigInteger.TWO);
@@ -44,14 +41,6 @@ public class EllipticCurveTest {
         // y value of a public generator of Elliptic Curve
         BigInteger yValue = EllipticCurve.squareRootModP(BigInteger.valueOf(-3).mod(EllipticCurve.PRIME_P));
         Assertions.assertNotEquals(yValue, null);
-
-        // y value that is guaranteed to not be negative
-
-    }
-
-    //
-    @Test
-    public void testNeutralElement() {
 
     }
 
@@ -247,14 +236,12 @@ public class EllipticCurveTest {
         }
     }
 
-    //TODO: Fixing return type of generate_sig from byte[][] into byte[]
     @Test
     public void test_verify_signiture() {
         var m = "Lorem Ipsem 12345678910".getBytes();
         var pw = "test password".getBytes();
         byte[] sig = EllipticCurve.generateSignature(m, pw);
 
-        // verifySignature() requires fpub key V. generate from pw?
         var V = EllipticCurve.generateKeyPair(pw).publicKey();
 
         assert EllipticCurve.verifySignature(sig, V, m);
@@ -269,7 +256,6 @@ public class EllipticCurveTest {
             EllipticCurve.RAND.nextBytes(pw);
             var sig = EllipticCurve.generateSignature(m, pw);
 
-            // verifySignature() requires fpub key V. generate from pw?
             var V = EllipticCurve.generateKeyPair(pw).publicKey();
 
             assert (EllipticCurve.verifySignature(sig, V, m));
@@ -322,20 +308,15 @@ public class EllipticCurveTest {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            // retrieve public key from a file
 
+            // retrieve public key from a file
             try {
                 FileInputStream fis = new FileInputStream(filePath);
-
                 long fileSize = fis.available();
-
-
                 byte[] fileToPublicKey = new byte[(int) fileSize];
 
                 // Read bytes from the file into byte array
                 fis.read(fileToPublicKey);
-
-                // input stream closes
                 fis.close();
 
                 // public key into stuff
@@ -353,6 +334,7 @@ public class EllipticCurveTest {
 
             } catch (IOException e) {
                 e.printStackTrace();
+                throw e;
             }
         }
         assert passes == sample_size;
