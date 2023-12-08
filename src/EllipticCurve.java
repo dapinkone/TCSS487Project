@@ -204,33 +204,12 @@ public class EllipticCurve {
      * @return
      */
     public static byte[] decrypt(byte[] zct, byte[] pw) {
-        // TODO: possible rewrite using a left_decode() function?
         // unpack different left encoded values from (Z, c, t)
         var decoded = byteStrDecode(zct);
         var z_x = decoded.get(0);
         var z_y = decoded.get(1);
         var c = decoded.get(2);
         var t = decoded.get(3);
-//        int ptr = 0; // points to the start of the current left_encode we're unpacking.
-//        int len; // the length of the current left_encode
-//        // unpack Z_x
-//        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
-//        byte[] z_x = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
-//        ptr += 1 + len;
-//
-//        // unpack Z_y
-//        len = zct[ptr] & 0xFF; // need to bitmask to avoid sign extension on the int typecast.
-//        byte[] z_y = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
-//        ptr += 1 + len;
-//
-//        // unpack c
-//        len = zct[ptr] & 0xFF;
-//        byte[] c = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len); // TODO: not using c?
-//        ptr += 1 + len;
-//
-//        // unpack t
-//        len = zct[ptr] & 0xFF;
-//        byte[] t = Arrays.copyOfRange(zct, ptr + 1, ptr + 1 + len);
 
         // unpacking complete, collect (Z_x, Z_y) into data structure for use:
         // TODO: (re?)store x_lsb ? rather than z_x to save space
@@ -269,9 +248,11 @@ public class EllipticCurve {
     }
 
     /**
-     * TODO: Can this accept a filepath of public key to directly convert
-     *      public key file into byte[]
+     * Retrieves signature stored in a file.
+     *
+     * @param fileName
      * @return
+     * @throws IOException
      */
     public static byte[] fileToSignature(String fileName) throws IOException {
         File file = new File(fileName);
@@ -300,7 +281,6 @@ public class EllipticCurve {
         }
     }
 
-    //TODO: fixing return type of g
     /**
      * Generates a signature for a byte array m under passphrase pw
      *
@@ -309,19 +289,19 @@ public class EllipticCurve {
      * @return KeyPair in left_encoded form.
      */
     public static byte[] generateSignature(byte[] m, byte[] pw) {
-        //▪ s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
+        // s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
         var L = 448;
         var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), L, "SK".getBytes()))
                 .shiftLeft(2).mod(R); // private key
 
-        //▪ k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
+        // k <- KMACXOF256(s, m, 448, “N”); k <- 4k (mod r)
         BigInteger k = new BigInteger(KMACXOF256.KMACXOF256(s.toByteArray(), m, L, "N".getBytes()))
                 .shiftLeft(2).mod(R);
 
-        //▪ U <- k*G;
+        // U <- k*G;
         var U = G.exp(k);
 
-        //▪ h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
+        // h <- KMACXOF256(Ux, m, 448, “T”); z <- (k – hs) mod r
         byte[] h = new BigInteger(
                 KMACXOF256.KMACXOF256(U.x.toByteArray(), m, L, "T".getBytes()))
                 .mod(R)
@@ -330,7 +310,7 @@ public class EllipticCurve {
 
         // left_encoded(h, z)
 
-        //▪ signature: (h, z)
+        // signature: (h, z)
         return KMACXOF256.appendBytes(KMACXOF256.encode_string(h), KMACXOF256.encode_string(z));
     }
 
