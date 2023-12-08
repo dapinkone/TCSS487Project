@@ -1,6 +1,8 @@
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -160,9 +162,9 @@ public class MainTest {
         // Encrypt a data file under a given elliptic public key file and
         // write the ciphertext to a file.
         var pw = "lorem ipsem";
-        var fn = "test/test_ciphertext.txt";
-        var fpub = "test/fpub.pu";
-        var fpriv = "test/fpriv.pr";
+        var fn = "test/test_ciphertext.bin";
+        var fpub = "test/fpub.bin";
+        var fpriv = "test/fpriv.bin";
 
         Main.main(new String[] { // gen pub key
                 "-p", "-pw", pw, "-fout", fpub
@@ -176,10 +178,37 @@ public class MainTest {
         );
 
         // read ciphertext out, and decrypt to verify
-        var A = EllipticCurve.decrypt(Main.readFile("test/scratch.txt"), pw.getBytes());
+        var A = EllipticCurve.decrypt(Main.readFile(fn), pw.getBytes());
         var B = Main.readFile("README.md");
         assert Arrays.equals(A, B);
     }
+
+//    public static byte[] fileToSignature(String fileName) throws IOException {
+//        File file = new File(fileName);
+//        if (!file.isAbsolute()) {
+//            file = new File(System.getProperty("user.dir"), fileName);
+//        }
+//
+//        if (!file.exists()) {
+//            throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
+//        }
+//        try (FileInputStream fis = new FileInputStream(file)){
+//            System.out.println("Signature file path: " + file.getAbsolutePath());
+//
+//            long fileSize = fis.available();
+//
+//            byte[] signature = new byte[(int) file.length()];
+//            // Read bytes from the file into byte array
+//            fis.read(signature);
+//            // input stream closes
+//            fis.close();
+//
+//            return signature;
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            throw e;
+//        }
+//    }
 
     @Test
     public void main_test_elliptic_enc_user_text_to_file() {

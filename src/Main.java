@@ -236,11 +236,8 @@ class Main {
                     throw new RuntimeException("Error generating public key: " + e.getMessage(), e);
                 }
             }
-//                    KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
-
-
             // private key <- password
-            case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
+            case PRIVATEKEY -> priv;
 
             case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, EllipticCurve.publicKeyToGPoint(fpub));
             case ELLIPTIC_DECRYPT -> EllipticCurve.decrypt(m, pw);
