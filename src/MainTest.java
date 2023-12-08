@@ -144,7 +144,7 @@ public class MainTest {
     public void main_test_private_key_to_file() throws IOException {
         // BONUS: Encrypt the private key from that pair under the given
         // password and write it to a different file as well.
-        var fn = "test/test_priv.pr";
+        var fn = "test/test_private.bin";
         var pw = "lorem ipsem";
 
         Main.main(new String[]{

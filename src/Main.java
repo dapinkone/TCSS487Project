@@ -237,7 +237,7 @@ class Main {
                 }
             }
             // private key <- password
-            case PRIVATEKEY -> priv;
+            case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
 
             case ELLIPTIC_ENCRYPT -> EllipticCurve.encrypt(m, EllipticCurve.publicKeyToGPoint(fpub));
             case ELLIPTIC_DECRYPT -> EllipticCurve.decrypt(m, pw);
