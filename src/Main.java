@@ -23,8 +23,6 @@ class Main {
      */
     private static String fin = null, fout = null, fpw = null, fpub = null, fsig = null;
 
-    // TODO: fpub may not be used due to its bugginess = public key,
-    //  s = signature
     private static byte[] pw = null, m = null, pub = null;
     public static void main(String[] args) throws IOException {
         //run_tests();
