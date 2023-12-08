@@ -198,8 +198,6 @@ class Main {
             case ENCRYPT -> KMACXOF256.symmetricEncrypt(m, pw);
             case DECRYPT -> KMACXOF256.symmetricDecrypt(m, pw);
 
-            // returns public key's y coordinate.
-            // TODO: If public key is V = s * G, should public key be stored as byte[] or x coordinate of Goldilock
             // Public Key <- password
             // Encodes public key's x and y coordinate.
             case PUBLICKEY -> {
@@ -211,11 +209,6 @@ class Main {
                     throw new RuntimeException("Error generating public key: " + e.getMessage(), e);
                 }
             }
-//                    KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
-
-            // TODO: If private key is encrypted with passphrase,
-            //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
-            //      be encrypted in ellipticCurve encryption(byte[] m, GoldilockPair)
             // private key <- password
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
 
@@ -315,7 +308,6 @@ class Main {
             }
         }
     }
-
 
     private static void outputResults(Mode modeSelected, byte[] out) {
         // results/output has been gathered, put said results where requested.

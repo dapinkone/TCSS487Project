@@ -58,25 +58,25 @@ public class EllipticCurve {
         return new KeyPair(privateKey, publicKey);
     }
 
-    /**
-     * Pre: currently takes left_encoded (G_Pair(y))
-     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
-     *
-     *
-     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
-     *                  if publicKey = left_encoded(y) || left_encoded(x)
-     * @return Goldilock pair retrieved from a public key file.
-     */
-    public static GoldilocksPair publicKeyToPoint(byte[] publicKey) {
-        // TODO: How does this cause an error?
-        var decoded = EllipticCurve.byteStrDecode(publicKey);
-
-        byte[] g_x = decoded.get(0);
-        byte[] g_y = decoded.get(1);
-
-        var x_lsb = (g_x[g_x.length - 1] & 1) == 1;
-        return new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(g_y));
-    }
+//    /**
+//     * Pre: currently takes left_encoded (G_Pair(y))
+//     * Should instead take left_encoded(G_Pair(x), G_Pair(Y))
+//     *
+//     *
+//     * @param publicKey left_encoded(x) || left_encoded(y); wrong elliptic point
+//     *                  if publicKey = left_encoded(y) || left_encoded(x)
+//     * @return Goldilock pair retrieved from a public key file.
+//     */
+//    public static GoldilocksPair publicKeyToPoint(byte[] publicKey) {
+//        // TODO: How does this cause an error?
+//        var decoded = EllipticCurve.byteStrDecode(publicKey);
+//
+//        byte[] g_x = decoded.get(0);
+//        byte[] g_y = decoded.get(1);
+//
+//        var x_lsb = (g_x[g_x.length - 1] & 1) == 1;
+//        return new EllipticCurve.GoldilocksPair(x_lsb, new BigInteger(g_y));
+//    }
 
     /**
      * Retrieves a public key from a public key encoded as
@@ -227,7 +227,8 @@ public class EllipticCurve {
         GoldilocksPair W = Z.exp(bigS);
 
         // 4. (ka || ke) <- KMACXOF256(W_x, "", 2 x 448, "PK")
-        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(), "".getBytes(), 2 * 448, "PK".getBytes());
+        byte[] ka_ke = KMACXOF256.KMACXOF256(W.x.toByteArray(),
+                "".getBytes(), 2 * 448, "PK".getBytes());
         // 4. (ka || ke) <- KMACXOF256(Wx, “”, 2×448, “PK”)
         byte[] ka = Arrays.copyOfRange(ka_ke, 0, 56);
         byte[] ke = Arrays.copyOfRange(ka_ke, 56, 112);
@@ -250,9 +251,9 @@ public class EllipticCurve {
     /**
      * Retrieves signature stored in a file.
      *
-     * @param fileName
-     * @return
-     * @throws IOException
+     * @param fileName File containing a signature
+     * @return appended(left_encoded( ), left_encoded(GPoint))
+     * @throws IOException If file name is not found.
      */
     public static byte[] fileToSignature(String fileName) throws IOException {
         File file = new File(fileName);
@@ -290,7 +291,7 @@ public class EllipticCurve {
      */
     public static byte[] generateSignature(byte[] m, byte[] pw) {
         // s <- KMACXOF256(pw, “”, 448, “SK”); s <- 4s (mod r)
-        var L = 448;
+        int L = 448;
         var s = new BigInteger(KMACXOF256.KMACXOF256(pw, "".getBytes(), L, "SK".getBytes()))
                 .shiftLeft(2).mod(R); // private key
 
@@ -320,10 +321,11 @@ public class EllipticCurve {
      *
      * @param hz signature (h, z)
      * @param m  message/plaintext
+     * @param
      * @return boolean
      */
     public static boolean verifySignature(byte[] hz, GoldilocksPair V, byte[] m) {
-        // TODO: should be able to pass in and destructure signature (h, z) as byte[]
+        // should be able to pass in and destructure signature (h, z) as byte[]
         var decoded = byteStrDecode(hz);
         var h = decoded.get(0);
         var z = decoded.get(1);
