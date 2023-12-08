@@ -20,13 +20,11 @@ class Main {
      * public key is only accepted as a file.
      * private key is only stored in a file.
      */
-    private static String fin = null, fout = null, fpw = null, fpriv = null,fpub = null, fsig = null;
+    private static String fin = null, fout = null, fpw = null, fpriv = null, fpub = null, fsig = null;
     // TODO: fpub may not be used due to its bugginess = public key,
     //  s = signature
     private static byte[] pw = null, m = null, pub = null, priv = null;
-    private static String fin = null, fout = null, fpw = null, fpub = null, fsig = null;
 
-    private static byte[] pw = null, m = null, pub = null;
     public static void main(String[] args) throws IOException {
         //run_tests();
 
@@ -127,13 +125,11 @@ class Main {
                 case 5 -> {
                     modeSelected = Mode.ENCRYPT;
                     fin = prompt(INPUT_PROMPT);
-
                     pw = prompt("password:").getBytes();// collect pw
                 }
                 case 6 -> {
                     modeSelected = Mode.DECRYPT;
                     fin = prompt(INPUT_PROMPT);
-
                     pw = prompt("password:").getBytes();// collect pw
                 }
                 case 7 -> {
@@ -242,9 +238,7 @@ class Main {
             }
 //                    KMACXOF256.appendBytes(KMACXOF256.left_encode(EllipticCurve.generateKeyPair(pw).publicKey().x),
 
-            // TODO: If private key is encrypted with passphrase,
-            //          should it be encrypted with symmetricEncryption(byte[] m, byte[] pw) or
-            //      be encrypted in ellipticCurve encryption(byte[] m, GoldilockPair)
+
             // private key <- password
             case PRIVATEKEY -> KMACXOF256.symmetricEncrypt(EllipticCurve.generateKeyPair(pw).privateKey().toByteArray(), pw);
 
