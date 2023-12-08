@@ -453,6 +453,13 @@ public class EllipticCurve {
             return publicKey;
         }
 
+        public byte[] encodedPublicKey() {
+            var pub = publicKey;
+            return KMACXOF256.appendBytes(
+                    KMACXOF256.encode_string(pub.x),
+                    KMACXOF256.encode_string(pub.y)
+            );
+        }
         /**
          * Returns a key pair as a (privateKey, goldilocksPair) format.
          *
