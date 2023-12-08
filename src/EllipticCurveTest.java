@@ -308,20 +308,15 @@ public class EllipticCurveTest {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            // retrieve public key from a file
 
+            // retrieve public key from a file
             try {
                 FileInputStream fis = new FileInputStream(filePath);
-
                 long fileSize = fis.available();
-
-
                 byte[] fileToPublicKey = new byte[(int) fileSize];
 
                 // Read bytes from the file into byte array
                 fis.read(fileToPublicKey);
-
-                // input stream closes
                 fis.close();
 
                 // public key into stuff

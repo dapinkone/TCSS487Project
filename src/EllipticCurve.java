@@ -79,8 +79,12 @@ public class EllipticCurve {
     }
 
     /**
+     * Retrieves a public key from a public key encoded as
+     * appended(left_encoded(G.x), left_encoded(G.y))
      *
-     * @return
+     * @param fileName contains public key in appended(left_encoded(G.x), left_encoded(G.y))
+     * @return Point to be used in Edwards Curve.
+     * @throws IOException
      */
     public static GoldilocksPair publicKeyToGPoint(String fileName) throws IOException {
         File file = new File(fileName);
@@ -116,18 +120,6 @@ public class EllipticCurve {
         }
     }
 
-    // public static file to signature
-    /**
-     * Currently uses 448 as number of bits in this function.
-     *
-     * @return
-     */
-    private static byte[] randomBytes() {
-        SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[448 / 8];
-        random.nextBytes(bytes);
-        return bytes;
-    }
     public static int bytesToInt(byte[] bytes) {
         int value = 0;
         for(byte b : bytes) {
@@ -203,12 +195,11 @@ public class EllipticCurve {
         // cryptogram : (Z, c, t) append Z.y with c and t because Z.x can be retrieved with Z.y
         return KMACXOF256.appendBytes(KMACXOF256.encode_string(Z.x),
                 KMACXOF256.encode_string(Z.y), leftEncodedC, leftEncodedT);
-        // t.length = 448, c.length = 448 because ke.length = 448 (?), Z.x = , Z.y =
     }
     /**
      * Decrypt the zct[] message under a passphrase pw
      *
-     * @param zct given cryptogram TODO: What is the required format of the zct[]?
+     * @param zct given cryptogram
      * @param pw  passphrase
      * @return
      */
