@@ -1,10 +1,39 @@
+import org.junit.After;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Objects;
 
 public class MainTest {
+    private final static String PREFIX = "./test/tmp/";
+    @BeforeAll
+    static void prepare() {
+        File obj = new File(PREFIX);
+        obj.mkdir();
+    }
+    /**
+     * cleans up temp files from tests
+     */
+//    @AfterEach
+//    void cleanupEach() {
+//        var obj = new File(PREFIX);
+//        for(var F : Objects.requireNonNull(obj.listFiles())) {
+//            F.delete();
+//        }
+//    }
+//    @AfterAll
+//    static void cleanup() {
+//        File obj = new File(PREFIX);
+//        obj.delete();
+//    }
     @Test
     void test_sha3() {
         // message / digest pairs, lifted from ShortMsgKAT_SHA3-xxx.txt files
@@ -142,12 +171,13 @@ public class MainTest {
     public void main_test_private_key_to_file() throws IOException {
         // BONUS: Encrypt the private key from that pair under the given
         // password and write it to a different file as well.
-        var fn = "test/test_priv.pr";
+        var fn = PREFIX + "test_priv.pr";
         var pw = "lorem ipsem";
 
         Main.main(new String[]{
                 "-q", "-pw", pw, "-fout", fn}
         );
+        Main.reset();
         var F = Main.readFile(fn);
         var keypair = EllipticCurve.generateKeyPair(pw.getBytes());
         assert Arrays.equals(
@@ -160,65 +190,175 @@ public class MainTest {
         // Encrypt a data file under a given elliptic public key file and
         // write the ciphertext to a file.
         var pw = "lorem ipsem";
-        var fn = "test/test_ciphertext.txt";
-        var fpub = "test/fpub.pu";
-        var fpriv = "test/fpriv.pr";
+        var fn = PREFIX + "test_ciphertext.txt";
+        var fpub = PREFIX + "fpub.pu";
+        var fpriv = PREFIX + "fpriv.pr";
 
         Main.main(new String[] { // gen pub key
                 "-p", "-pw", pw, "-fout", fpub
         });
+        Main.reset();
         Main.main(new String[] { // gen priv key
                 "-q", "-pw", pw, "-fout", fpriv
         });
-
+        Main.reset();
         Main.main(new String[]{ // encrypt with public key
                 "-i", "-fin", "README.md", "-fpub", fpub, "-fout", fn}
         );
-
+        Main.reset();
         // read ciphertext out, and decrypt to verify
-        var A = EllipticCurve.decrypt(Main.readFile("test/scratch.txt"), pw.getBytes());
+        var A = EllipticCurve.decrypt(Main.readFile(fn), pw.getBytes());
         var B = Main.readFile("README.md");
         assert Arrays.equals(A, B);
     }
 
     @Test
-    public void main_test_elliptic_enc_user_text_to_file() {
+    public void main_test_elliptic_enc_user_text_to_file() throws IOException {
         // BONUS: Encrypt text input by the user directly to the app instead of
         // having to read it from a file (but write the ciphertext to a file).
+        var data = "some text abcdefghijkl;12324";
 
+        // hijack stdin for testing:
+        var in = new ByteArrayInputStream((data + "\n").getBytes());
+        var stdin = System.in;
+        System.setIn(in);
+
+        var pw = "lorem ipsem";
+        var fn = PREFIX + "test_ciphertext.txt";
+        var fpub = PREFIX + "fpub.pu";
+
+        Main.main(new String[] { // gen pub key to encrypt with
+                "-p", "-pw", pw, "-fout", fpub
+        });
+        System.out.println("c");
+        Main.reset();
+        Main.main(new String[]{ // encrypt stdin with public key
+                "-i", "-fpub", fpub, "-fout", fn}
+        );
+        System.out.println("d");
+        Main.reset();
+        // read ciphertext out, and decrypt to verify
+        var A = EllipticCurve.decrypt(Main.readFile(fn), pw.getBytes());
+        System.out.println("e");
+        System.setIn(stdin);
+        assert Arrays.equals(A, data.getBytes());
     }
 
     @Test
-    public void main_test_decrypt_elliptic_enc_file() {
+    public void main_test_decrypt_elliptic_enc_file() throws IOException {
         // Decrypt a given elliptic-encrypted file from a given password and
         // write the decrypted data to a file.
+        var pw = "lorem ipsem";
+        // NOTE: data is the contents of fn, but it's written in the previous test.
+        var data = "some text abcdefghijkl;12324";
+        var fn = PREFIX + "test_ciphertext.txt";
 
+        // build our test ciphertext
+        Main.writeFile(fn,
+                EllipticCurve.encrypt(
+                        data.getBytes(),
+                        EllipticCurve.generateKeyPair(pw.getBytes()).publicKey()));
+
+        var fout = PREFIX + "scratch.txt";
+        Main.reset();
+        Main.main(new String[]{
+                "-k",
+                "-pw", pw,
+                "-fin", fn,
+                "-fout", fout
+        });
+
+        var A = data.getBytes();
+        var B = Main.readFile(fout);
+        assert Arrays.equals(A, B);
     }
 
     @Test
-    public void main_test_sign_file_sig_to_file() {
+    public void main_test_sign_file_sig_to_file() throws IOException {
         // Sign a given file from a given password and
         // write the signature to a file.
-
+        var fn = "README.md";
+        var sigfn = PREFIX + "README.sig";
+        var pw = "lorem ipsem";
+        Main.main(
+                new String[]{
+                        "-s",
+                        "-fin", fn,
+                        "-pw", pw,
+                        "-fout", sigfn
+                }
+        );
+        // verify
+        assert EllipticCurve.verifySignature(
+                Main.readFile(PREFIX + "README.sig"),
+                EllipticCurve.generateKeyPair(pw.getBytes()).publicKey(),
+                Main.readFile(fn)
+        );
     }
 
     @Test
-    public void main_test_sign_input_sig_to_file() {
+    public void main_test_sign_input_sig_to_file() throws IOException {
         // BONUS: Sign text input by the user directly to the app instead of
         // having to read it from a file (but write the signature to a file).
 
+        // hijack stdin for testing.
+        var data = "some text abcdefghijkl;12324";
+        // hijack stdin for testing:
+        var stdin = System.in;
+        var in = new ByteArrayInputStream((data + "\n").getBytes());
+        System.setIn(in);
+
+        var sigfn = PREFIX + "test_input.sig";
+        var pw = "lorem ipsem";
+        Main.reset();
+        Main.main(
+                new String[]{
+                        "-s",
+                        "-pw", pw,
+                        "-fout", sigfn
+                }
+        );
+        System.setIn(stdin);
+        // verify
+        assert EllipticCurve.verifySignature(
+                Main.readFile(sigfn),
+                EllipticCurve.generateKeyPair(pw.getBytes()).publicKey(),
+                data.getBytes()
+        );
     }
 
     @Test
-    public void main_test_verify_data_file_sig_pubkey_from_files() {
+    public void main_test_verify_data_file_sig_pubkey_from_files() throws IOException {
         // Verify a given data file and its signature file under a given public key file.
-
+        Main.main(
+                new String[]{
+                        "-v",
+                        "-fin", "README.md",
+                        "-fsig", (PREFIX + "README.sig"),
+                        "-fpub", (PREFIX + "fpub.pu")
+                }
+        );
     }
 
     @Test
-    public void main_test_verify_input_sig_from_file() {
+    public void main_test_verify_input_sig_from_file() throws IOException {
         // BONUS: Verify text input by the user directly to the app instead of
         // having to read it from a file (but read the signature from a file).
 
+        // hijack stdin for testing.
+        var data = "some text abcdefghijkl;12324";
+        // hijack stdin for testing:
+        var stdin = System.in;
+        var in = new ByteArrayInputStream((data + "\n").getBytes());
+        System.setIn(in);
+
+        Main.main(
+                new String[]{
+                        "-v",
+                        "-fsig", (PREFIX + "test_input.sig"),
+                        "-fpub", (PREFIX + "fpub.pu")
+                }
+        );
+        System.setIn(stdin);
     }
 }
