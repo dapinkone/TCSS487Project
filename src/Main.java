@@ -24,6 +24,10 @@ class Main {
     // TODO: fpub may not be used due to its bugginess = public key,
     //  s = signature
     private static byte[] pw = null, m = null, pub = null, priv = null;
+    public static void reset() {
+        Main.fin = Main.fout = Main.fpw = Main.fpriv = Main.fpub = Main.fsig = null;
+        Main.pw = Main.m = Main.pub = Main.priv = null;
+    }
 
     public static void main(String[] args) throws IOException {
         //run_tests();
@@ -191,7 +195,7 @@ class Main {
         // require m ?
         if(m == null) {
             switch (modeSelected) {
-                case HASH, TAG, ENCRYPT, ELLIPTIC_ENCRYPT, SIGN:
+                case HASH, TAG, ENCRYPT, ELLIPTIC_ENCRYPT, SIGN, VERIFY:
                     while(m == null)
                         m = prompt("Input file data: ").getBytes();
                     break;
@@ -207,7 +211,7 @@ class Main {
             switch (modeSelected) {
                 case HASH:
                     break;
-                case ELLIPTIC_ENCRYPT:
+                case ELLIPTIC_ENCRYPT, VERIFY:
                     if(fpub != null) // if we have a public key, we don't need pw
                         break;
                 default:
@@ -291,7 +295,7 @@ class Main {
         if (fpub != null) pub = readFile(fpub); // public key provided
         if(pw != null) assignKeys(pw);
         // private key provided
-        if (fpriv != null) priv = KMACXOF256.symmetricDecrypt(readFile(fpriv), pw);
+        if (fpriv != null) priv = readFile(fpriv);//KMACXOF256.symmetricDecrypt(readFile(fpriv), pw);
 
         switch (mode) {
             case PUBLICKEY : // public and private key require a password
@@ -308,15 +312,15 @@ class Main {
             case ELLIPTIC_DECRYPT : {
                 // Decryption requires file & password
                 // read password
-                while (pw == null) {
-                    pw = prompt("password: ").getBytes();
-                }
-                assignKeys(pw);
-
-                // reads file
-                if (fin != null) {
-                    m = readFile(fin);
-                } else { m = prompt("Input file data: ").getBytes(); }
+//                while (pw == null) {
+//                    pw = prompt("password: ").getBytes();
+//                }
+//                assignKeys(pw);
+//
+//                // reads file
+//                if (fin != null) {
+//                    m = readFile(fin);
+//                } else { m = prompt("Input file data: ").getBytes(); }
 
                 break;
             }
@@ -376,7 +380,7 @@ class Main {
         return sb.toString();
     }
 
-    private static void writeFile(String fout, byte[] data) {
+    public static void writeFile(String fout, byte[] data) {
         try {
             Path filePath = Paths.get(fout);
             Files.write(filePath, data);
